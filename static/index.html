@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmTech Solutions - Sistema de Gestão Agrícola</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- inline CSS para melhor desempenho no html page loading -->
+    <style>
+        .culture-card {
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        .culture-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .recommendation-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #198754;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .json-viewer {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .form-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-leaf me-2"></i>
+                FarmTech Solutions
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="nav-cultures">Culturas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-analysis">Análise</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-about">Sobre</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div id="alert-container"></div>
+        
+        <!-- culturas view -->
+        <div id="cultures-view">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Gerenciamento de Culturas</h2>
+                <button class="btn btn-primary" id="btn-new-culture">
+                    <i class="fas fa-plus me-2"></i>Nova Cultura
+                </button>
+            </div>
+            
+            <!-- formulário de nova cultura -->
+            <div class="form-section mb-4" id="culture-form" style="display: none;">
+                <h3 id="form-title">Nova Cultura</h3>
+                <form id="culture-data-form">
+                    <input type="hidden" id="culture-id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="culture-type" class="form-label">Tipo de Cultura</label>
+                            <select class="form-select" id="culture-type" required>
+                                <option value="">Selecione...</option>
+                                <option value="1">Soja</option>
+                                <option value="2">Cana-de-Açúcar</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="culture-area" class="form-label">Área (hectares)</label>
+                            <input type="number" class="form-control" id="culture-area" step="0.01" min="0.1" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="culture-espacamento" class="form-label">Espaçamento entre linhas (metros)</label>
+                            <input type="number" class="form-control" id="culture-espacamento" step="0.01" min="0.1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="culture-irrigation" class="form-label">Sistema de Irrigação</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="culture-irrigation">
+                                <label class="form-check-label" for="culture-irrigation">Ativar irrigação</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- campos específicos por tipo -->
+                    <div id="soja-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="soja-variedade" class="form-label">Variedade</label>
+                            <select class="form-select" id="soja-variedade">
+                                <option value="convencional">Convencional</option>
+                                <option value="transgênica">Transgênica</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="cana-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="cana-ciclo" class="form-label">Ciclo</label>
+                            <select class="form-select" id="cana-ciclo">
+                                <option value="curto">Curto</option>
+                                <option value="médio">Médio</option>
+                                <option value="longo">Longo</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" id="btn-cancel-form">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- lista de culturas -->
+            <div class="row" id="cultures-list">
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando culturas...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- análise view -->
+        <div id="analysis-view" style="display: none;">
+            <h2 class="mb-4">Análise de Cultura</h2>
+            
+            <div class="alert alert-info" id="analysis-select-prompt">
+                <i class="fas fa-info-circle me-2"></i>
+                Selecione uma cultura na aba "Culturas" para visualizar a análise.
+            </div>
+            
+            <div id="analysis-content" style="display: none;">
+                <div class="mb-4">
+                    <h3 id="analysis-culture-title"></h3>
+                    <div class="badge bg-primary mb-2" id="analysis-culture-type"></div>
+                    <div class="badge bg-secondary mb-2" id="analysis-culture-area"></div>
+                </div>
+                
+                <ul class="nav nav-tabs" id="analysisTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-recommendations">Recomendações</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-weather">Clima</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-stats">Estatísticas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-json">JSON</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <!-- recomendações -->
+                    <div class="tab-pane fade show active" id="tab-recommendations">
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Resumo da Análise</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recommendation-summary"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Recomendações Básicas</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="basic-recommendations"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Recomendações Específicas</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="specific-recommendations"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Manejo de Insumos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="inputs-recommendations"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- clima -->
+                    <div class="tab-pane fade" id="tab-weather">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Condições Atuais</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="current-weather"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Impacto na Agricultura</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="weather-impact"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Gráficos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" id="weather-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- estatísticas -->
+                    <div class="tab-pane fade" id="tab-stats">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Estatísticas da Cultura</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="culture-stats"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Projeções</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="culture-projections"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Gráficos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" id="stats-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- JSON -->
+                    <div class="tab-pane fade" id="tab-json">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5>Dados Brutos (JSON)</h5>
+                                <button class="btn btn-sm btn-outline-secondary" id="btn-copy-json">
+                                    <i class="fas fa-copy me-1"></i>Copiar
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="json-viewer" id="json-data"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- "Sobre" view -->
+        <div id="about-view" style="display: none;">
+            <h2 class="mb-4">Sobre o Sistema</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h3>FarmTech Solutions</h3>
+                    <p class="lead">Sistema de Gestão Agrícola para Agricultura Digital</p>
+                    
+                    <hr>
+                    
+                    <p>Este sistema foi desenvolvido para integrar tecnologias inovadoras no gerenciamento de culturas agrícolas, com foco em:</p>
+                    
+                    <ul>
+                        <li>Cálculo de área e linhas de plantio</li>
+                        <li>Gerenciamento de insumos (herbicidas, fertilizantes)</li>
+                        <li>Integração com dados meteorológicos em tempo real</li>
+                        <li>Análises estatísticas e recomendações personalizadas</li>
+                    </ul>
+                    
+                    <p>O sistema utiliza uma arquitetura que integra Python e R:</p>
+                    <ul>
+                        <li>Backend em Python para gerenciamento de dados e interface com o usuário</li>
+                        <li>Processamento estatístico em R com integração API meteorológica</li>
+                        <li>Frontend web responsivo para visualização e gerenciamento</li>
+                    </ul>
+
+                    <hr>
+                    
+                    <p class="mb-0 text-muted">
+                        <small>Desenvolvido como parte do projeto acadêmico da FIAP - 2025</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>FarmTech Solutions</h5>
+                    <p>Transformando a agricultura através da tecnologia</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>&copy; 2025 FarmTech Solutions. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- bootstrap & libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- application javaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
+

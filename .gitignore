@@ -1,0 +1,8 @@
+*.old
+*.swp
+.notes
+*.bak
+cap1-venv/*
+*.pyc
+__pycache__/
+
