@@ -9,7 +9,7 @@ from controllers.menu_controller import MenuController
 from controllers.culture_controller import CultureController
 from utils.json_formatter import format_output
 
-# configuração de logging
+# Configuração de logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def parse_args():
     """Processa os argumentos de linha de comando"""
     parser = argparse.ArgumentParser(description='FarmTech Solutions - Sistema de Gerenciamento Agrícola')
 
-    # grupo de opções mutuamente exclusivas para formato de saída
+    # Grupo de opções mutuamente exclusivas para formato de saída
     output_format = parser.add_mutually_exclusive_group()
     output_format.add_argument('--text', action='store_true', help='Saída em formato de texto')
     output_format.add_argument('--json', action='store_true', default=True, help='Saída em formato JSON (padrão)')
@@ -29,18 +29,18 @@ def main():
     args = parse_args()
     output_format = 'text' if args.text else 'json'
 
-    # inicializa controladores
+    # Inicializa controladores
     culture_controller = CultureController()
     menu_controller = MenuController(culture_controller)
 
     try:
-        # inicia o menu interativo
+        # Inicia o menu interativo
         result = menu_controller.run()
 
-        # formata a saída de acordo com o formato especificado
+        # Formata a saída de acordo com o formato especificado
         output = format_output(result, output_format)
 
-        # exibe o resultado
+        # Exibe o resultado
         print(output)
 
         return 0

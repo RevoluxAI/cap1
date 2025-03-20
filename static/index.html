@@ -4,9 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmTech Solutions - Sistema de Gestão Agrícola</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" sizes="32x32">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- <link rel="apple-touch-icon" href="apple-touch-icon.png">  -->
+    <!-- <link rel="manifest" href="site.webmanifest">              -->
+    
+    <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- inline CSS para melhor desempenho no html page loading -->
     <style>
         .culture-card {
             transition: transform 0.2s;
@@ -74,7 +81,7 @@
     <div class="container my-4">
         <div id="alert-container"></div>
         
-        <!-- culturas view -->
+        <!-- Culturas View -->
         <div id="cultures-view">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Gerenciamento de Culturas</h2>
@@ -87,11 +94,11 @@
             <div class="form-section mb-4" id="culture-form" style="display: none;">
                 <h3 id="form-title">Nova Cultura</h3>
                 <form id="culture-data-form">
-                    <input type="hidden" id="culture-id">
+                    <input type="hidden" id="culture-id" name="culture-id">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="culture-type" class="form-label">Tipo de Cultura</label>
-                            <select class="form-select" id="culture-type" required>
+                            <select class="form-select" id="culture-type" name="culture_type" required>
                                 <option value="">Selecione...</option>
                                 <option value="1">Soja</option>
                                 <option value="2">Cana-de-Açúcar</option>
@@ -99,18 +106,18 @@
                         </div>
                         <div class="col-md-6">
                             <label for="culture-area" class="form-label">Área (hectares)</label>
-                            <input type="number" class="form-control" id="culture-area" step="0.01" min="0.1" required>
+                            <input type="number" class="form-control" id="culture-area" name="area" step="0.01" min="0.1" required>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="culture-espacamento" class="form-label">Espaçamento entre linhas (metros)</label>
-                            <input type="number" class="form-control" id="culture-espacamento" step="0.01" min="0.1" required>
+                            <input type="number" class="form-control" id="culture-espacamento" name="espacamento" step="0.01" min="0.1" required>
                         </div>
                         <div class="col-md-6">
                             <label for="culture-irrigation" class="form-label">Sistema de Irrigação</label>
                             <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" type="checkbox" id="culture-irrigation">
+                                <input class="form-check-input" type="checkbox" id="culture-irrigation" name="irrigacao">
                                 <label class="form-check-label" for="culture-irrigation">Ativar irrigação</label>
                             </div>
                         </div>
@@ -120,7 +127,7 @@
                     <div id="soja-fields" style="display: none;">
                         <div class="mb-3">
                             <label for="soja-variedade" class="form-label">Variedade</label>
-                            <select class="form-select" id="soja-variedade">
+                            <select class="form-select" id="soja-variedade" name="variedade">
                                 <option value="convencional">Convencional</option>
                                 <option value="transgênica">Transgênica</option>
                             </select>
@@ -130,7 +137,7 @@
                     <div id="cana-fields" style="display: none;">
                         <div class="mb-3">
                             <label for="cana-ciclo" class="form-label">Ciclo</label>
-                            <select class="form-select" id="cana-ciclo">
+                            <select class="form-select" id="cana-ciclo" name="ciclo">
                                 <option value="curto">Curto</option>
                                 <option value="médio">Médio</option>
                                 <option value="longo">Longo</option>
@@ -145,7 +152,7 @@
                 </form>
             </div>
             
-            <!-- lista de culturas -->
+            <!-- Lista de Culturas -->
             <div class="row" id="cultures-list">
                 <div class="col-12 text-center py-5">
                     <div class="spinner-border text-primary" role="status">
@@ -156,22 +163,25 @@
             </div>
         </div>
         
-        <!-- análise view -->
+        <!-- Análise View -->
         <div id="analysis-view" style="display: none;">
-            <h2 class="mb-4">Análise de Cultura</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 id="analysis-culture-title" class="mb-0">Selecione uma cultura para análise</h2>
+                <!-- o botão de atualização será adicionado aqui dinamicamente pelo JavaScript -->
+            </div>
             
+            <!-- elementos mantidos apenas para compatibilidade com o JS existente, mas escondidos por CSS -->
+            <div class="d-none">
+                <div id="analysis-culture-type"></div>
+                <div id="analysis-culture-area"></div>
+            </div>
+
             <div class="alert alert-info" id="analysis-select-prompt">
                 <i class="fas fa-info-circle me-2"></i>
                 Selecione uma cultura na aba "Culturas" para visualizar a análise.
             </div>
             
             <div id="analysis-content" style="display: none;">
-                <div class="mb-4">
-                    <h3 id="analysis-culture-title"></h3>
-                    <div class="badge bg-primary mb-2" id="analysis-culture-type"></div>
-                    <div class="badge bg-secondary mb-2" id="analysis-culture-area"></div>
-                </div>
-                
                 <ul class="nav nav-tabs" id="analysisTabs">
                     <li class="nav-item">
                         <a class="nav-link active" data-bs-toggle="tab" href="#tab-recommendations">Recomendações</a>
@@ -188,7 +198,7 @@
                 </ul>
                 
                 <div class="tab-content">
-                    <!-- recomendações -->
+                    <!-- Recomendações -->
                     <div class="tab-pane fade show active" id="tab-recommendations">
                         <div class="card mb-4">
                             <div class="card-header bg-success text-white">
@@ -232,7 +242,7 @@
                         </div>
                     </div>
                     
-                    <!-- clima -->
+                    <!-- Clima -->
                     <div class="tab-pane fade" id="tab-weather">
                         <div class="row">
                             <div class="col-md-6">
@@ -267,7 +277,7 @@
                         </div>
                     </div>
                     
-                    <!-- estatísticas -->
+                    <!-- Estatísticas -->
                     <div class="tab-pane fade" id="tab-stats">
                         <div class="row">
                             <div class="col-md-6">
@@ -317,41 +327,178 @@
                 </div>
             </div>
         </div>
-        
-        <!-- "Sobre" view -->
-        <div id="about-view" style="display: none;">
-            <h2 class="mb-4">Sobre o Sistema</h2>
-            <div class="card">
-                <div class="card-body">
-                    <h3>FarmTech Solutions</h3>
-                    <p class="lead">Sistema de Gestão Agrícola para Agricultura Digital</p>
+        <!-- Sobre View -->
+            <!-- substituir o conteúdo atual da div about-view no arquivo static/index.html -->
+            <div id="about-view" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h2 class="text-primary">Sobre o Sistema</h2>
+                        <hr class="divider">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-box rounded-circle bg-success text-white me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                        <i class="fas fa-leaf fa-lg"></i>
+                                    </div>
+                                    <h3 class="mb-0">FarmTech Solutions</h3>
+                                </div>
+                                
+                                <p class="lead text-muted mb-4">Sistema de Gestão Agrícola para Agricultura Digital</p>
+                                
+                                <p>Este sistema foi desenvolvido para integrar tecnologias inovadoras no gerenciamento de culturas agrícolas, com foco em digitalizar e otimizar processos para produtores rurais.</p>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <hr>
-                    
-                    <p>Este sistema foi desenvolvido para integrar tecnologias inovadoras no gerenciamento de culturas agrícolas, com foco em:</p>
-                    
-                    <ul>
-                        <li>Cálculo de área e linhas de plantio</li>
-                        <li>Gerenciamento de insumos (herbicidas, fertilizantes)</li>
-                        <li>Integração com dados meteorológicos em tempo real</li>
-                        <li>Análises estatísticas e recomendações personalizadas</li>
-                    </ul>
-                    
-                    <p>O sistema utiliza uma arquitetura que integra Python e R:</p>
-                    <ul>
-                        <li>Backend em Python para gerenciamento de dados e interface com o usuário</li>
-                        <li>Processamento estatístico em R com integração API meteorológica</li>
-                        <li>Frontend web responsivo para visualização e gerenciamento</li>
-                    </ul>
-
-                    <hr>
-                    
-                    <p class="mb-0 text-muted">
-                        <small>Desenvolvido como parte do projeto acadêmico da FIAP - 2025</small>
-                    </p>
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h4 class="mb-3"><i class="fas fa-cogs me-2 text-success"></i>Principais Recursos</h4>
+                                
+                                <div class="feature-list">
+                                    <div class="d-flex mb-2">
+                                        <div class="flex-shrink-0 me-2 text-success"><i class="fas fa-check-circle"></i></div>
+                                        <div>Cálculo preciso de área e linhas de plantio</div>
+                                    </div>
+                                    <div class="d-flex mb-2">
+                                        <div class="flex-shrink-0 me-2 text-success"><i class="fas fa-check-circle"></i></div>
+                                        <div>Gerenciamento avançado de insumos (herbicidas, fertilizantes)</div>
+                                    </div>
+                                    <div class="d-flex mb-2">
+                                        <div class="flex-shrink-0 me-2 text-success"><i class="fas fa-check-circle"></i></div>
+                                        <div>Integração com dados meteorológicos em tempo real</div>
+                                    </div>
+                                    <div class="d-flex mb-2">
+                                        <div class="flex-shrink-0 me-2 text-success"><i class="fas fa-check-circle"></i></div>
+                                        <div>Análises estatísticas e recomendações personalizadas</div>
+                                    </div>
+                                    <div class="d-flex mb-2">
+                                        <div class="flex-shrink-0 me-2 text-success"><i class="fas fa-check-circle"></i></div>
+                                        <div>Suporte às principais culturas agrícolas do país</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h4 class="mb-3"><i class="fas fa-laptop-code me-2 text-success"></i>Tecnologias Utilizadas</h4>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="tech-card p-3 bg-light rounded">
+                                            <h5 class="mb-2"><i class="fab fa-python me-2 text-primary"></i>Backend</h5>
+                                            <p class="mb-0">Python para gerenciamento de dados e interface com o usuário, utilizando Flask para endpoints RESTful.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="tech-card p-3 bg-light rounded">
+                                            <h5 class="mb-2"><i class="fas fa-chart-bar me-2 text-danger"></i>Análise de Dados</h5>
+                                            <p class="mb-0">Processamento estatístico em R com integração a APIs meteorológicas para análises precisas.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="tech-card p-3 bg-light rounded">
+                                            <h5 class="mb-2"><i class="fab fa-js me-2 text-warning"></i>Frontend</h5>
+                                            <p class="mb-0">JavaScript moderno com Bootstrap para uma interface responsiva e acessível em qualquer dispositivo.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-primary text-white py-3">
+                                <h4 class="mb-0"><i class="fas fa-users me-2"></i>Equipe de Desenvolvimento</h4>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col" class="fw-bold">Nome Completo</th>
+                                                <th scope="col" class="fw-bold">RM</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>GABRIELA MAMEDE GAGLIARDI</td>
+                                                <td>RM563641</td>
+                                            </tr>
+                                            <tr>
+                                                <td>LEONARDO DE SENA</td>
+                                                <td>RM563351</td>
+                                            </tr>
+                                            <tr>
+                                                <td>MOISES DE LIMA CAVALCANTE</td>
+                                                <td>RM561909</td>
+                                            </tr>
+                                            <tr>
+                                                <td>RICARDO BORGES SOARES</td>
+                                                <td>RM561421</td>
+                                            </tr>
+                                            <tr>
+                                                <td>VIVIAN NASCIMENTO SILVA AMORIM</td>
+                                                <td>RM565078</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="mt-4 p-3 bg-light rounded">
+                                    <p class="mb-0 d-flex align-items-center">
+                                        <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                                        <span>Projeto acadêmico desenvolvido para a FIAP - 2025</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <style>
+            /* estilos para a página Sobre */
+            .divider {
+                height: 3px;
+                width: 60px;
+                background-color: #198754;
+                opacity: 1;
+                margin-top: 0.5rem;
+            }
+            .feature-list {
+                margin-left: 10px;
+            }
+            .tech-card {
+                height: 100%;
+                border-left: 3px solid #198754;
+                transition: transform 0.2s;
+            }
+            .tech-card:hover {
+                transform: translateY(-5px);
+            }
+            .icon-box {
+                transition: transform 0.2s;
+            }
+            .card:hover .icon-box {
+                transform: rotate(15deg);
+            }
+            </style>
+
+    </div>
     </div>
 
     <footer class="bg-dark text-white py-4 mt-5">
@@ -368,12 +515,12 @@
         </div>
     </footer>
 
-    <!-- bootstrap & libraries -->
+    <!-- Bootstrap & Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- application javaScript -->
-    <script src="js/app.js"></script>
+    <!-- Application JavaScript (Modular) -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
 

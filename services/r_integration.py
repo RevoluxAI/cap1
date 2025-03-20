@@ -89,8 +89,8 @@ def send_to_r_for_analysis(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
         # verifica se o R retornou dados válidos
         if result.stdout:
-            # tenta carregar a saída como JSON
             try:
+                # tenta carregar a saída como JSON
                 return json.loads(result.stdout)
             except json.JSONDecodeError as e:
                 logger.error(f"Erro ao decodificar saída JSON do R: {str(e)}")
@@ -200,11 +200,11 @@ def get_recommendations(culture_data: Dict[str, Any], weather_data: Dict[str, An
             json.dump(combined_data, tmp)
             tmp_filename = tmp.name
 
-            # verifica conteúdo do arquivo temporário para debug
+            # verifica conteúdo do arquivo temporário para depuração
             tmp.seek(0)
             logger.debug(f"Conteúdo do arquivo temporário para recomendações: {tmp.read()}")
 
-        # caminho para o script R de recomendações
+        # diretório para o script R de recomendações
         r_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
                                    'r', 'modules', 'recommendations.R')
 
