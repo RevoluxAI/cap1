@@ -1,5 +1,4 @@
 #!/usr/bin/env Rscript
-
 # Módulo de recomendações agrícolas baseadas em dados meteorológicos
 
 # carrega pacotes necessários de forma segura
@@ -83,20 +82,20 @@ generate_recommendations <- function(culture_data, weather_data) {
     ))
   }
   
-  # tente extrair valores meteorológicos diretamente
-  # para compatibilidade com diferentes estruturas, tente diferentes caminhos
-  temperature <- NULL
-  humidity <- NULL
-  wind_speed <- NULL
+  # tenta extrair valores meteorológicos diretamente
+  # para compatibilidade com diferentes estruturas, tenta diferentes caminhos
+  temperature    <- NULL
+  humidity       <- NULL
+  wind_speed     <- NULL
   main_condition <- NULL
   
-  # verifica acesso direto
+  # verificar acesso direto
   if (!is.null(weather_data$temperature)) temperature <- weather_data$temperature
   if (!is.null(weather_data$humidity)) humidity <- weather_data$humidity
   if (!is.null(weather_data$wind_speed)) wind_speed <- weather_data$wind_speed
   if (!is.null(weather_data$main_condition)) main_condition <- weather_data$main_condition
   
-  # se dados de clima estão completos
+  # se contêm dados de clima completos
   if (!is.null(temperature) && !is.null(humidity) && !is.null(wind_speed) && !is.null(main_condition)) {
     log_info(paste("Dados meteorológicos extraídos com sucesso: temperatura =", temperature, 
                  "umidade =", humidity, "vento =", wind_speed, 
@@ -121,7 +120,6 @@ generate_recommendations <- function(culture_data, weather_data) {
                                                      wind_speed, 
                                                      main_condition)
     
-    # resumo
     summary <- list(
       can_apply_chemicals = can_apply_chemicals,
       needs_irrigation = needs_irrigation,
@@ -237,7 +235,7 @@ generate_recommendations <- function(culture_data, weather_data) {
       development = "Desenvolvimento dentro do esperado para as condições climáticas atuais.",
       productivity_forecast = sprintf(
         "Produtividade estimada: %.1f %s/ha. Acima do esperado para a região.",
-        production_estimate / area * 0.9,  # ajuste conservador para previsão
+        production_estimate / area * 0.9,  # Ajuste conservador para previsão
         if (tipo == "Soja") "sacas" else if (tipo == "Cana-de-Açúcar") "toneladas" else "unidades"
       ),
       historical_comparison = sprintf(
@@ -267,7 +265,7 @@ generate_recommendations <- function(culture_data, weather_data) {
     if (!is.null(wind_speed)) partial_data$wind_speed <- wind_speed
     if (!is.null(main_condition)) partial_data$main_condition <- main_condition
     
-    # se obtém, pelo menos, algumas informações, tente gerar recomendações parciais
+    # se contém alguma informação, tenta gerar recomendações parciais
     if (length(partial_data) > 0) {
       log_info(paste("Dados parciais extraídos:", 
                     paste(names(partial_data), collapse=", ")))
@@ -449,7 +447,7 @@ get_input_management_recommendations <- function(culture_data, temperature, humi
   # extração de dados básicos da cultura
   culture_type <- culture_data$tipo
   
-  # verificar se existem dados de aplicação de insumos
+  # verifica se existem dados de aplicação de insumos
   has_herbicide <- !is.null(culture_data$quantidade_herbicida) && culture_data$quantidade_herbicida > 0
   has_fertilizer <- !is.null(culture_data$quantidade_fertilizante) && culture_data$quantidade_fertilizante > 0
   
@@ -516,7 +514,7 @@ process_recommendations <- function(input_json_file) {
     input_data <- jsonlite::fromJSON(input_json_file)
     log_info("Dados JSON carregados com sucesso")
     
-    # verifica se temos os dados necessários
+    # verifica se possui os dados necessários
     if (is.null(input_data$culture)) {
       log_info("ERRO: Dados de cultura ausentes")
       return(list(
@@ -555,15 +553,15 @@ process_recommendations <- function(input_json_file) {
 # EXECUÇÃO PRINCIPAL
 #=====================================================
 
-# quando executado como script independente...
+# quando executado como script independente
 if (!interactive()) {
-  # carrega pacotes necessários
+  # carregar pacotes necessários
   load_packages()
   
   # obtém argumentos de linha de comando
   args <- commandArgs(trailingOnly = TRUE)
   
-  # verifica se possui o arquivo de entrada
+  # verifica se possui arquivo de entrada
   if (length(args) < 1) {
     log_info("ERRO: Nenhum arquivo de entrada especificado")
     cat(jsonlite::toJSON(list(

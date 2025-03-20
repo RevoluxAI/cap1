@@ -16,7 +16,6 @@ class MenuController:
 
     def __init__(self, culture_controller):
         """Inicializa o controlador do menu"""
-
         self.culture_controller = culture_controller
         self.is_running = False
         self.data = []  # vetor de dados para armazenamento
@@ -31,7 +30,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Dados resultantes das operações
         """
-
         if mode == "cli":
             return self._run_cli_mode()
         else:
@@ -45,7 +43,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Dados resultantes das operações
         """
-
         self.is_running = True
         result = {"status": "success", "data": None, "message": "Operação concluída com sucesso"}
 
@@ -89,7 +86,6 @@ class MenuController:
 
     def _display_menu(self) -> None:
         """Exibe o menu principal (apenas para modo CLI)"""
-
         print("\n" + "="*50)
         print("  FARMTECH SOLUTIONS - SISTEMA DE GESTÃO AGRÍCOLA")
         print("="*50)
@@ -110,7 +106,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         result = {"status": "error", "data": None, "message": "Opção não implementada"}
 
         if choice == 1:
@@ -146,9 +141,8 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         try:
-            # extrai e valida os dados do formulário
+            # extrai e validar os dados do formulário
             culture_type = int(form_data.get('culture_type', 0))
             if culture_type not in [1, 2]:
                 return {"status": "error", "data": None, "message": "Tipo de cultura inválido (deve ser 1 para Soja ou 2 para Cana-de-Açúcar)"}
@@ -229,7 +223,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Dados de todas as culturas
         """
-
         if not self.data:
             return {"status": "warning", "data": [], "message": "Nenhuma cultura cadastrada"}
 
@@ -245,7 +238,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Dados da cultura especificada
         """
-
         try:
             culture_id = int(culture_id)
             if 0 <= culture_id < len(self.data):
@@ -254,6 +246,7 @@ class MenuController:
                 return {"status": "error", "data": None, "message": "Cultura não encontrada"}
         except (ValueError, TypeError):
             return {"status": "error", "data": None, "message": "ID de cultura inválido"}
+
 
     def update_culture(self, culture_id: int, form_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -266,7 +259,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
@@ -291,6 +283,20 @@ class MenuController:
             if culture_type == 'Soja' and 'variedade' in form_data:
                 self.data[culture_id]['variedade'] = form_data['variedade']
                 updated = True
+                
+                # revalida parâmetros de soja após atualização
+                if updated and ('area' in form_data or 'espacamento' in form_data or 'variedade' in form_data):
+                    area = self.data[culture_id].get('area', 0)
+                    espacamento = self.data[culture_id].get('espacamento', 0)
+                    variedade = self.data[culture_id].get('variedade', 'convencional')
+                    with_irrigation = self.data[culture_id].get('irrigacao', False)
+                    
+                    # obtém novas recomendações
+                    recomendacoes = self.culture_controller.validate_soybean_parameters(
+                        area, espacamento, variedade, with_irrigation
+                    )
+                    self.data[culture_id]['recomendacoes'] = recomendacoes
+                    
             elif culture_type == 'Cana-de-Açúcar' and 'ciclo' in form_data:
                 self.data[culture_id]['ciclo'] = form_data['ciclo']
                 updated = True
@@ -314,8 +320,19 @@ class MenuController:
                 self.data[culture_id]['irrigacao'] = irrigacao
                 updated = True
                 
-                # revalida parâmetros de cana-de-açúcar se irrigação foi alterada
-                if culture_type == 'Cana-de-Açúcar':
+                # revalida parâmetros se irrigação foi alterada
+                if culture_type == 'Soja':
+                    area = self.data[culture_id].get('area', 0)
+                    espacamento = self.data[culture_id].get('espacamento', 0)
+                    variedade = self.data[culture_id].get('variedade', 'convencional')
+                    
+                    # obtém novas recomendações
+                    recomendacoes = self.culture_controller.validate_soybean_parameters(
+                        area, espacamento, variedade, irrigacao
+                    )
+                    self.data[culture_id]['recomendacoes'] = recomendacoes
+                    
+                elif culture_type == 'Cana-de-Açúcar':
                     area = self.data[culture_id].get('area', 0)
                     espacamento = self.data[culture_id].get('espacamento', 0)
                     ciclo = self.data[culture_id].get('ciclo', 'médio')
@@ -326,7 +343,7 @@ class MenuController:
                     )
                     self.data[culture_id]['recomendacoes'] = recomendacoes
 
-            # recalcula valores necessários se houve atualização
+            # recalcular valores necessários se houve atualização
             if updated and ('area' in form_data or 'espacamento' in form_data):
                 if "linhas_calculadas" in self.data[culture_id]:
                     linhas = self.culture_controller.calculate_lines(culture_id, self.data[culture_id])
@@ -335,9 +352,9 @@ class MenuController:
                 # recalcula insumos
                 self.culture_controller._calculate_inputs(self.data[culture_id])
 
-            # prepara mensagem com recomendações para cana-de-açúcar
+            # prepara mensagem com recomendações
             message = "Cultura atualizada com sucesso"
-            if updated and culture_type == 'Cana-de-Açúcar' and 'recomendacoes' in self.data[culture_id]:
+            if updated and 'recomendacoes' in self.data[culture_id]:
                 recomendacoes = self.data[culture_id]['recomendacoes']
                 
                 # adiciona alertas para parâmetros fora do recomendado
@@ -350,7 +367,10 @@ class MenuController:
                     alerts.append(recomendacoes["area"]["mensagem"])
                 
                 if not self.data[culture_id].get('irrigacao', False):
-                    alerts.append("Irrigação é recomendada para cultivo de cana-de-açúcar.")
+                    if culture_type == 'Soja':
+                        alerts.append("Irrigação é recomendada para maximizar a produtividade da soja.")
+                    else:
+                        alerts.append("Irrigação é recomendada para cultivo de cana-de-açúcar.")
                 
                 if alerts:
                     message += "\n\nRecomendações importantes:\n" + "\n".join(f"- {alert}" for alert in alerts)
@@ -371,6 +391,8 @@ class MenuController:
             logger.error(f"Erro ao atualizar cultura: {str(e)}")
             return {"status": "error", "data": None, "message": f"Erro ao atualizar: {str(e)}"}
 
+
+
     def delete_culture(self, culture_id: int) -> Dict[str, Any]:
         """
         Endpoint de API para deletar uma cultura
@@ -379,9 +401,8 @@ class MenuController:
             culture_id (int): ID da cultura a ser deletada
 
         Returns:
-            Dict[str, Any]:r Resultado da operação
+            Dict[str, Any]: Resultado da operação
         """
-
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
@@ -412,7 +433,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado do cálculo
         """
-
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
@@ -440,7 +460,6 @@ class MenuController:
             logger.error(f"Erro ao calcular linhas: {str(e)}")
             return {"status": "error", "data": None, "message": f"Erro ao calcular: {str(e)}"}
 
-
     def get_weather_analysis(self, culture_id: int) -> Dict[str, Any]:
         """
         Endpoint de API para obter análise meteorológica para uma cultura
@@ -451,7 +470,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da análise meteorológica
         """
-
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
@@ -465,20 +483,12 @@ class MenuController:
             # obtém recomendações baseadas nos dados meteorológicos e da cultura
             recommendations = self.culture_controller.get_recommendations(self.data[culture_id], weather_data)
 
-            # formata dados para visualização da interface
-            if weather_data and "data" in weather_data and "weather" in weather_data["data"]:
-                # extrai o primeiro item do array weather para uso direto
-                if isinstance(weather_data["data"]["weather"], list) and len(weather_data["data"]["weather"]) > 0:
-                    current_weather = weather_data["data"]["weather"][0]
-                else:
-                    current_weather = weather_data["data"]["weather"]
-            else:
-                current_weather = None
-
-            # extrai análises meteorológicas se disponíveis
-            weather_analysis = None
-            if weather_data and "data" in weather_data and "analysis" in weather_data["data"]:
-                weather_analysis = weather_data["data"]["analysis"]
+            # extrai dados meteorológicos atuais e análise
+            current_weather = self._extract_current_weather(weather_data)
+            weather_analysis = self._extract_weather_analysis(weather_data)
+            
+            # extrai dados específicos para soja se disponíveis
+            soy_specific = self._extract_soy_specific_data(recommendations, self.data[culture_id])
 
             # adiciona recomendações específicas para cana-de-açúcar
             sugarcane_recommendations = None
@@ -503,8 +513,9 @@ class MenuController:
                 "recommendations": recommendations,
                 "current_weather": current_weather,
                 "weather_analysis": weather_analysis,
-                # recomendações específicas para cana-de-açúcar
+                # recomendações específicas para cada tipo de cultura
                 "sugarcane_recommendations": sugarcane_recommendations,
+                "soy_specific": soy_specific,  # adiciona o campo soy_specific
                 # adiciona dados de produtividade e recomendações extras para o frontend
                 "productivity": {
                     "estimate": self._extract_productivity_estimate(self.data[culture_id], recommendations),
@@ -525,6 +536,158 @@ class MenuController:
             logger.error(f"Erro ao obter análise meteorológica: {str(e)}")
             return {"status": "error", "data": None, "message": f"Erro na análise: {str(e)}"}
 
+    def _extract_current_weather(self, weather_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extrai os dados meteorológicos atuais da estrutura de dados.
+        
+        Args:
+            weather_data (Dict[str, Any]): Dados meteorológicos completos
+            
+        Returns:
+            Optional[Dict[str, Any]]: Dados meteorológicos atuais extraídos ou None
+        """
+        if not weather_data:
+            return None
+            
+        # verifica a estrutura aninhada completa
+        if weather_data.get("data") and weather_data["data"].get("weather"):
+            weather_array = weather_data["data"]["weather"]
+            if isinstance(weather_array, list) and len(weather_array) > 0:
+                return weather_array[0]  # retorna o primeiro item do array
+            elif isinstance(weather_array, dict):
+                return weather_array     # retorna o dicionário diretamente
+                
+        # verifica estrutura alternativa (dados no nível principal)
+        if weather_data.get("weather"):
+            weather_array = weather_data["weather"]
+            if isinstance(weather_array, list) and len(weather_array) > 0:
+                return weather_array[0]
+            elif isinstance(weather_array, dict):
+                return weather_array
+                
+        # verifica se os próprios dados possuem as propriedades esperadas
+        if any(key in weather_data for key in ["temperature", "humidity", "wind_speed"]):
+            return weather_data
+            
+        return None
+
+    def _extract_weather_analysis(self, weather_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extrai os dados de análise meteorológica da estrutura de dados.
+        
+        Args:
+            weather_data (Dict[str, Any]): Dados meteorológicos completos
+            
+        Returns:
+            Optional[Dict[str, Any]]: Dados de análise meteorológica ou None
+        """
+        if not weather_data:
+            return None
+            
+        # verifica na estrutura aninhada
+        if weather_data.get("data") and weather_data["data"].get("analysis"):
+            return weather_data["data"]["analysis"]
+            
+        # verifica no nível principal
+        if weather_data.get("analysis"):
+            return weather_data["analysis"]
+            
+        # verifica estrutura alternativa
+        if weather_data.get("weather_analysis"):
+            return weather_data["weather_analysis"]
+            
+        # tenta construir análise a partir de campos individuais
+        analysis = {}
+        
+        # extrai análise de temperatura, se disponível
+        temperature_analysis = None
+        if weather_data.get("temperature_analysis"):
+            temperature_analysis = weather_data["temperature_analysis"]
+        elif weather_data.get("data") and weather_data["data"].get("temperature_analysis"):
+            temperature_analysis = weather_data["data"]["temperature_analysis"]
+            
+        if temperature_analysis:
+            analysis["temperature"] = temperature_analysis
+            
+        # extrai análise de umidade, se disponível
+        humidity_analysis = None
+        if weather_data.get("humidity_analysis"):
+            humidity_analysis = weather_data["humidity_analysis"]
+        elif weather_data.get("data") and weather_data["data"].get("humidity_analysis"):
+            humidity_analysis = weather_data["data"]["humidity_analysis"]
+            
+        if humidity_analysis:
+            analysis["humidity"] = humidity_analysis
+            
+        # extrai análise de vento, se disponível
+        wind_analysis = None
+        if weather_data.get("wind_analysis"):
+            wind_analysis = weather_data["wind_analysis"]
+        elif weather_data.get("data") and weather_data["data"].get("wind_analysis"):
+            wind_analysis = weather_data["data"]["wind_analysis"]
+            
+        if wind_analysis:
+            analysis["wind"] = wind_analysis
+            
+        # extrai impacto agrícola, se disponível
+        agricultural_impact = None
+        if weather_data.get("agricultural_impact"):
+            agricultural_impact = weather_data["agricultural_impact"]
+        elif weather_data.get("data") and weather_data["data"].get("agricultural_impact"):
+            agricultural_impact = weather_data["data"]["agricultural_impact"]
+            
+        if agricultural_impact:
+            analysis["agricultural_impact"] = agricultural_impact
+            
+        # retorna análise construída se tiver algum dado
+        if analysis:
+            return analysis
+            
+        return None
+
+    def _extract_soy_specific_data(self, recommendations: Optional[Dict[str, Any]], 
+                                  culture_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extrai dados específicos para a cultura de soja.
+        
+        Args:
+            recommendations (Optional[Dict[str, Any]]): Dados de recomendações
+            culture_data (Dict[str, Any]): Dados da cultura
+            
+        Returns:
+            Optional[Dict[str, Any]]: Dados específicos para soja ou None
+        """
+        # verifica se não é uma cultura de soja
+        if culture_data.get("tipo") != "Soja":
+            return None
+        
+        # verifica nas recomendações diretas
+        if recommendations and recommendations.get("soy_specific"):
+            return recommendations["soy_specific"]
+            
+        # verifica nas recomendações aninhadas
+        if recommendations and recommendations.get("data") and recommendations["data"].get("soy_specific"):
+            return recommendations["data"]["soy_specific"]
+            
+        # verifica na análise estatística da cultura
+        if culture_data.get("analise_estatistica") and culture_data["analise_estatistica"].get("soy_specific"):
+            return culture_data["analise_estatistica"]["soy_specific"]
+            
+        # tenta construir um objeto mínimo de dados específicos de soja com base em outras informações
+        if culture_data.get("variedade"):
+            # cria dados básicos com as informações disponíveis
+            return {
+                "productivity_estimate": {
+                    "sacas_por_hectare": culture_data.get("produtividade_sacas", 0),
+                    "total_sacas": culture_data.get("producao_total", 0)
+                },
+                "optimal_planting_period": "Setembro a Novembro",  # Período padrão
+                "variety": culture_data.get("variedade", "")
+            }
+            
+        return None
+
+
     def _extract_productivity_estimate(self, culture_data: Dict[str, Any], recommendations: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extrai dados de produtividade estimada das recomendações ou dados da cultura
@@ -536,7 +699,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Dados formatados de produtividade
         """
-
         result = {
             "value": 0,
             "unit": "sacas/ha",
@@ -555,7 +717,7 @@ class MenuController:
             if "statistical_models" in rec_data and "productivity_forecast" in rec_data["statistical_models"]:
                 forecast = rec_data["statistical_models"]["productivity_forecast"]
                 
-                # regex para extrair valores da produtividade para soja ou cana
+                # regex para extrai valores da produtividade para soja ou cana
                 if culture_data.get("tipo") == "Soja":
                     match = re.search(r"Produtividade estimada: (\d+\.?\d*) sacas/ha", forecast)
                 else:
@@ -571,7 +733,7 @@ class MenuController:
                 if "potential_production" in metrics:
                     prod_text = metrics["potential_production"]
                     
-                    # regex para extrair valores com base no tipo de cultura
+                    # regex para extrai valores com base no tipo de cultura
                     if culture_data.get("tipo") == "Soja":
                         match = re.search(r"(\d+) sacas totais estimadas", prod_text)
                     else:
@@ -604,7 +766,6 @@ class MenuController:
         """
         Extrai período ótimo de plantio/colheita
         """
-
         # verifica em recomendações
         if recommendations and "data" in recommendations:
             rec_data = recommendations["data"]
@@ -698,8 +859,8 @@ class MenuController:
 
         return stats
 
-
     # === MÉTODOS CLI ===
+
     def _handle_data_input(self) -> Dict[str, Any]:
         """
         Processa a entrada de dados pelo usuário (modo CLI)
@@ -707,7 +868,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         print("\n----- ENTRADA DE DADOS -----")
         print("Escolha o tipo de cultura:")
         print("1. Soja")
@@ -794,7 +954,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         if not self.data:
             return {"status": "warning", "data": [], "message": "Nenhum dado disponível para visualização"}
 
@@ -802,7 +961,7 @@ class MenuController:
         for i, item in enumerate(self.data):
             print(f"\nCultura #{i}:")
             for key, value in item.items():
-                # não exibir dados muito aninhados como recomendações
+                # não exibe dados muito aninhados como recomendações
                 if key == "recomendacoes":
                     print(f"  {key}: [Dados detalhados disponíveis]")
                     continue
@@ -837,7 +996,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         if not self.data:
             return {"status": "warning", "data": [], "message": "Nenhum dado disponível para atualização"}
 
@@ -994,7 +1152,6 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-
         if not self.data:
             return {"status": "warning", "data": [], "message": "Nenhum dado disponível para deleção"}
 

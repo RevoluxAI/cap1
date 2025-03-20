@@ -7,7 +7,7 @@ load_packages <- function() {
   # lista de pacotes requeridos
   packages <- c("jsonlite", "dplyr", "httr")
   
-  # carrega cada pacote
+  # carregar cada pacote
   for (pkg in packages) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
       cat("Instalando ", pkg, "\n", file = stderr())
@@ -45,7 +45,7 @@ get_current_weather <- function(city, country = NULL, api_key = "b3c61c120b5a088
     units = units
   )
   
-  # faz requisição à API
+  # realiza requisição à API
   response <- tryCatch({
     log_info("Fazendo requisição à API Weather para", location)
     httr::GET(url, query = params)
@@ -108,7 +108,7 @@ get_current_weather <- function(city, country = NULL, api_key = "b3c61c120b5a088
   return(result)
 }
 
-# analisa dados meteorológicos sem imprimir
+# analisa dados meteorológicos sem imprimir nada
 analyze_weather <- function(weather_data) {
   # verifica se os dados são válidos
   if (is.null(weather_data) || (is.data.frame(weather_data) && nrow(weather_data) == 0)) {
@@ -136,7 +136,7 @@ analyze_weather <- function(weather_data) {
   # análise do vento
   wind_analysis <- analyze_wind(wind_speed)
   
-  # analisa condição meteorológica para agricultura
+  # analisar condição meteorológica para agricultura
   agro_impact <- assess_weather_impact(
     temperature, 
     humidity, 
@@ -300,7 +300,7 @@ process_weather_data <- function(input_json_file) {
     log_info("Processando dados meteorológicos...")
     log_info("Arquivo de entrada:", input_json_file)
     
-    # verifica se o arquivo existe
+    # verificar se o arquivo existe
     if (!file.exists(input_json_file)) {
       log_info("ERRO: Arquivo não encontrado:", input_json_file)
       return(list(
@@ -318,7 +318,7 @@ process_weather_data <- function(input_json_file) {
       log_info("Usando coordenadas para obter dados meteorológicos")
       
       # implementa chamada à API com coordenadas
-      # temporariamente, usa São Paulo como fallback
+      # temporariamente usamos São Paulo como fallback
       log_info("NOTA: Consultando para São Paulo como fallback (implementação futura para coordenadas)")
       weather_data <- get_current_weather("São Paulo", "BR")
       
@@ -342,7 +342,7 @@ process_weather_data <- function(input_json_file) {
     } else if (!is.null(input_data$city)) {
       log_info("Usando cidade para obter dados meteorológicos:", input_data$city)
       
-      # se cidade for fornecida, usa para obter dados meteorológicos
+      # se cidade for fornecida, use-a para obter dados meteorológicos
       city <- input_data$city
       country <- input_data$country
       
@@ -353,14 +353,14 @@ process_weather_data <- function(input_json_file) {
         
         result <- list(
           status = "success",
-          data = list(
-            weather = weather_data,
+          data   = list(
+            weather  = weather_data,
             analysis = analysis
           )
         )
       } else {
         result <- list(
-          status = "error",
+          status  = "error",
           message = paste("Erro ao obter dados meteorológicos para", city)
         )
       }
@@ -368,7 +368,7 @@ process_weather_data <- function(input_json_file) {
     } else {
       log_info("Nenhuma localização fornecida, usando São Paulo como padrão")
       
-      # se nem coordenadas e nem cidade forem fornecidas, usa São Paulo como padrão
+      # se nem coordenadas nem cidade forem fornecidas, usa São Paulo como padrão
       weather_data <- get_current_weather("São Paulo", "BR")
       
       if (!is.null(weather_data)) {
@@ -405,7 +405,7 @@ process_weather_data <- function(input_json_file) {
 # EXECUÇÃO PRINCIPAL
 #=====================================================
 
-# quando executado como script independente...
+# quando executado como script independente
 if (!interactive()) {
   # carrega pacotes necessários
   load_packages()
@@ -413,7 +413,7 @@ if (!interactive()) {
   # obtém argumentos de linha de comando
   args <- commandArgs(trailingOnly = TRUE)
   
-  # verifica se possui arquivo de entrada
+  # verifica se temos arquivo de entrada
   if (length(args) < 1) {
     log_info("ERRO: Nenhum arquivo de entrada especificado")
     cat(jsonlite::toJSON(list(
@@ -426,7 +426,7 @@ if (!interactive()) {
   # processa dados meteorológicos
   result <- process_weather_data(args[1])
   
-  # Enviar resultado como JSON para stdout
+  # envia resultado como JSON para stdout
   cat(jsonlite::toJSON(result, auto_unbox = TRUE, pretty = TRUE))
 }
 

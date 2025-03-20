@@ -2,6 +2,7 @@
 
 # script principal para integração com Python
 
+# importar pacote jsonlite primeiro para garantir disponibilidade
 if (!require("jsonlite", quietly = TRUE)) {
   install.packages("jsonlite", repos = "https://cran.rstudio.com/")
   library(jsonlite)
@@ -60,8 +61,7 @@ load_modules <- function(script_dir) {
     }, error = function(e) {
       log_info(paste("ERRO ao carregar módulo", module, ":", e$message))
       log_info(paste("Caminho:", module_path))
-
-      # retorna erro em JSON no stdout e encerra
+      # retorna erro em JSON no stdout e encerrar
       cat(jsonlite::toJSON(list(
         status = "error",
         message = paste("Erro ao carregar módulo", module, ":", e$message)
@@ -94,8 +94,8 @@ summarize_input <- function(data) {
     # ignora campos com valores NA
     if (!is.na(value)) {
       result[[field]] <- list(
-        mean = value,  # para um único valor, a média é o próprio valor
-        std_dev = 0,   # para um único valor, o desvio padrão é zero
+        mean = value,  # Para um único valor, a média é o próprio valor
+        std_dev = 0,   # Para um único valor, o desvio padrão é zero
         min = value,
         max = value
       )
@@ -133,7 +133,7 @@ calculate_soy_productivity <- function(area, irrigation) {
     base_productivity <- base_productivity * 1.25
   }
   
-  # simular variação de produtividade por área
+  # simula variação de produtividade por área
   area_factor <- 1.0
   if (area > 100) {
     area_factor <- 1.05  # economia de escala para áreas maiores
@@ -172,20 +172,19 @@ calculate_sugarcane_productivity <- function(area, irrigation, cycle) {
 }
 
 
-#' Função para que corrige o período de plantio.
 #' Obtém o período ideal de plantio ou colheita para diferentes culturas
 #'
 #' @description
-#' Esta função determina o período recomendado de plantio ou colheita com base
-#' no tipo de cultura e suas características específicas (variedade ou ciclo).
+#' Esta função determina o período recomendado de plantio ou colheita com base no tipo de cultura
+#' e suas características específicas (variedade ou ciclo).
 #'
-#' @param culture Character. Tipo de cultura (p.ex: "Soja", "Cana-de-Açúcar")
+#' @param culture Character. Tipo de cultura (ex: "Soja", "Cana-de-Açúcar")
 #' @param variety Character. Variedade específica ou ciclo da cultura
 #'
 #' @return Character. Período recomendado para plantio ou colheita
 #'
 #' @examples
-#' get_optimal_planting_period("Soja", "convencional")     # Retorna "Setembro a Novembro"
+#' get_optimal_planting_period("Soja", "convencional")  # Retorna "Setembro a Novembro"
 #' get_optimal_planting_period("Cana-de-Açúcar", "médio")  # Retorna "Fevereiro a Abril"
 get_optimal_planting_period <- function(culture, variety = NULL) {
   # normaliza os parâmetros para evitar problemas com maiúsculas/minúsculas
@@ -231,7 +230,7 @@ get_optimal_planting_period <- function(culture, variety = NULL) {
   
   # para culturas como cana-de-açúcar, retorna com base na variedade/ciclo
   if (culture == "cana-de-açúcar") {
-    # Se não for especificada variedade, usa o valor padrão
+    # se não for especificada variedade, usa o valor padrão
     if (is.null(variety)) {
       return(culture_data[["default"]]$period)
     }
@@ -291,7 +290,7 @@ get_current_weather <- function(city, country = NULL, api_key = "b3c61c120b5a088
     units = units
   )
   
-  # faz requisição à API
+  # realiza requisição à API
   response <- tryCatch({
     httr::GET(url, query = params)
   }, error = function(e) {
@@ -355,7 +354,7 @@ get_current_weather <- function(city, country = NULL, api_key = "b3c61c120b5a088
 
 # analisa dados meteorológicos sem imprimir nada
 analyze_weather <- function(weather_data) {
-  # verifica se os dados são válidos
+  # verificar se os dados são válidos
   if (is.null(weather_data) || nrow(weather_data) == 0) {
     return(list(error = "Dados meteorológicos inválidos ou vazios"))
   }
@@ -376,7 +375,7 @@ analyze_weather <- function(weather_data) {
   # análise do vento
   wind_analysis <- analyze_wind(wind_speed)
   
-  # analisa a condição meteorológica para agricultura
+  # analisa condição meteorológica para agricultura
   agro_impact <- assess_weather_impact(
     temperature, 
     humidity, 
@@ -534,9 +533,9 @@ assess_weather_impact <- function(temperature, humidity, wind_speed, condition) 
   ))
 }
 
-# função principal para processar os dados
+# função principal - processa os dados
 process_data <- function(input_data) {
-  # extrai informações da cultura
+  # extrair informações da cultura
   culture_type <- input_data$tipo
   area <- input_data$area
   irrigation <- input_data$irrigacao
@@ -586,7 +585,7 @@ process_data <- function(input_data) {
       results$sugarcane_specific <- analyze_sugarcane_data(input_data)
     }
   } else {
-    # se não houver tipo de cultura definido, é provavelmente um teste, hehe...
+    # se não houver tipo de cultura definido, é provavelmente uma execução de teste
     results$test_message <- "Dados recebidos para teste, sem tipo de cultura específico"
   }
   
@@ -602,7 +601,7 @@ process_data <- function(input_data) {
 
 # função principal
 main <- function() {
-  # verifica argumentos da linha de comando
+  # verificar argumentos da linha de comando
   args <- commandArgs(trailingOnly = TRUE)
   
   if (length(args) < 1) {
@@ -652,7 +651,7 @@ main <- function() {
 # EXECUÇÃO PRINCIPAL
 #=========================================================
 
-# SEMPRE usa tryCatch para capturar erros
+# SEMPRE use tryCatch para capturar erros
 tryCatch({
   # inicia log no stderr
   log_info("Iniciando API FarmTech...")
@@ -664,10 +663,6 @@ tryCatch({
   
   # carrega pacotes e módulos
   load_packages()
-  
-  # como teste, pula o carregamento de módulos por enquanto
-  # para isolar problemas
-  # load_modules(script_dir)
   
   # gera recomendações baseadas nos dados da cultura e clima
 generate_recommendations <- function(culture_data, weather_data) {
@@ -798,8 +793,8 @@ generate_recommendations <- function(culture_data, weather_data) {
   
   # risco de deriva de defensivos
   if (culture_data$quantidade_herbicida > 0 || culture_data$quantidade_fertilizante > 0) {
-    drift_risk <- if (wind_speed < 3) "baixo"
-                 else if (wind_speed < 8) "moderado"
+    drift_risk <- if (wind_speed < 3)      "baixo"
+                 else if (wind_speed < 8)  "moderado"
                  else if (wind_speed < 15) "alto"
                  else "extremo"
     
@@ -1014,5 +1009,4 @@ generate_recommendations <- function(culture_data, weather_data) {
   
   quit(status = 1)
 })
-
 

@@ -6,7 +6,7 @@
 if (!require("stats")) install.packages("stats")
 if (!require("dplyr")) install.packages("dplyr")
 
-# Função para calcular estatísticas básicas de um vetor numérico
+# função para calcular estatísticas básicas de um vetor numérico
 calculate_basic_stats <- function(values) {
   if (length(values) == 0 || all(is.na(values))) {
     return(list(
@@ -25,12 +25,12 @@ calculate_basic_stats <- function(values) {
   values <- values[!is.na(values)]
   
   result <- list(
-    mean = mean(values),
-    median = median(values),
+    mean    = mean(values),
+    median  = median(values),
     std_dev = sd(values),
-    min = min(values),
-    max = max(values),
-    n = length(values)
+    min     = min(values),
+    max     = max(values),
+    n       = length(values)
   )
   
   # adiciona quartis se houver pelo menos 4 valores
@@ -62,9 +62,9 @@ analyze_trend <- function(values, dates = NULL) {
     values <- values[valid_indices]
     dates <- dates[valid_indices]
     
-    # se datas forem fornecidas, usa para análise de tendência no tempo
+    # se datas forem fornecidas, use-as para análise de tendência no tempo
     if (length(values) >= 2 && length(dates) >= 2) {
-      # converte datas para formato numérico
+      # converter datas para formato numérico
       if (is.character(dates)) {
         dates <- as.numeric(as.POSIXct(dates))
       } else if (inherits(dates, "Date")) {
@@ -73,7 +73,7 @@ analyze_trend <- function(values, dates = NULL) {
         dates <- seq_along(values)
       }
       
-      # implementação de regressão linear simples
+      # regressão linear simples
       model <- lm(values ~ dates)
       slope <- coef(model)[2]
       p_value <- summary(model)$coefficients[2, 4]
@@ -99,8 +99,8 @@ analyze_trend <- function(values, dates = NULL) {
   
   # análise simples sem datas (apenas verifica diferença entre início e fim)
   start_value <- values[1]
-  end_value <- values[length(values)]
-  diff_pct <- (end_value - start_value) / start_value * 100
+  end_value   <- values[length(values)]
+  diff_pct    <- (end_value - start_value) / start_value * 100
   
   if (abs(diff_pct) < 5) {
     trend <- "estável"
@@ -135,7 +135,7 @@ detect_outliers <- function(values, multiplier = 1.5) {
   q3 <- quantile(clean_values, 0.75)
   iqr <- q3 - q1
   
-  # define limites
+  # defini limites
   lower_bound <- q1 - multiplier * iqr
   upper_bound <- q3 + multiplier * iqr
   
@@ -164,10 +164,10 @@ analyze_time_series <- function(values, dates, frequency = NULL) {
     ))
   }
   
-  # verificar e converter dados para formato de série temporal
+  # verifica e converter dados para formato de série temporal
   ts_data <- tryCatch({
     if (is.null(frequency)) {
-      # tentar detectar a frequência
+      # tenta detectar a frequência
       if (inherits(dates, "Date") || inherits(dates, "POSIXt")) {
         # verifica se os dados são diários
         date_diffs <- diff(as.numeric(dates))

@@ -31,11 +31,10 @@ def _format_as_text(data: Dict[str, Any], indent: int = 0) -> str:
     Returns:
         str: Dados formatados como texto estruturado
     """
-
     result = []
     indent_str = ' ' * indent
 
-    # processa status e mensagem primeiro se existirem
+    # processar status e mensagem primeiro se existirem
     if 'status' in data:
         result.append(f"{indent_str}Status: {data['status']}")
 
