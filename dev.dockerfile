@@ -37,7 +37,7 @@ COPY r/ ./r/
 # instala as bibliotecas R
 # define repositórios recomendados para CRAN e Bioconductor
 RUN R -e "options(repos = c(CRAN='https://cloud.r-project.org/', Bioc='https://bioconductor.org/packages/3.17/bioc/'))"
-RUN R -e "install.packages(c('jsonlite', 'dplyr', 'httr', 'pillar', 'tibble', 'tidyselect', 'vctrs', 'openssl'), repos='https://cran.rstudio.com/')"
+RUN R -e "install.packages(c('jsonlite', 'dplyr', 'httr', 'pillar', 'tibble', 'tidyselect', 'vctrs', 'openssl'))"
 
 # restaura pacotes via renv antes de qualquer instalação manual
 RUN cd /app/r && \

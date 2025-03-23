@@ -100,7 +100,7 @@ Use o `requirements.txt`:
 **Nota:** Caso não tenha o "PIP", instale. O pacote deve constar na mirror
 com o nome: `python3-pip`
 
-### 1.2. Execução
+### 1.1. Execução
 
 O projeto pode ser executado tanto por linha de comando ou usando o web server.
 Usando o CLI:
@@ -117,7 +117,7 @@ O script disponibiliza modo de desenvolvedor usando a variável de ambiente
     $ DEBUG=true python3 web_api.py
 
 
-## 2. Instalação Automática
+## 2 - Instalação Automática
 
 Optando pela execução automática, não requer a leitura da seção anterior.
 Requer a instalação do Docker ou Podman, apesar de funcionar bem no Windows,
