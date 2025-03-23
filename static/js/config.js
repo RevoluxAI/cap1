@@ -6,7 +6,8 @@
 export const CONFIG = {
     // configuração da API
     API: {
-        BASE_URL: 'http://localhost:5000/api',
+        //BASE_URL: 'http://localhost:5000/api',
+        BASE_URL: '/api',
         TIMEOUT: 30000,       // timeout em milissegundos (aumentado para 30 segundos)
         RETRY_COUNT: 2,       // número de tentativas em caso de falha
         CACHE_DURATION: 60000 // duração do cache em milissegundos (1 minuto)
