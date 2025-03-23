@@ -39,11 +39,34 @@ vídeo demonstrativo do funcionamento das aplicações em Python e R.
 
 ---
 
-# Modo de Uso:
+# Modo de Uso
+Este projeto oferece duas maneira de instalações. A primeira requer um
+conhecimento mais técnico e, portanto, apresenta uma complexidade maior e o
+usuário precisará saber lidar com a instalação de dependências das bibliotecas
+Python e R, usando ferramentas auxiliares como Python VENV com PIP e RENV, 
+respectivamente.
+
+A outra instalação utiliza o conceito de container para abstrair a complexidade
+de instalação, a execução de todos os procedimentos subsequencialmente usados no
+modo manual, mas executados automaticamente ao executar o arquivo
+"dev.dockerfile" (Dockerfile) usando Podman ou Docker. Duas aplicações que 
+implementam container no padrão OCI.
+
+Recomendamos o optar pela "Instalação Automática" para usuários com intenção de
+somente executar a aplicação. Contrapartida, se opta por modificar o software
+arbitrariamente, recomendamos que realize a instalação manual para obter o
+ambiente de desenvolvimento organizado e preparado em sua máquina (ambiente host).
+
+## 1 - Instalação Manual
 
 Requer a instalação do Python3, R e sistema operacional Linux.
 
-1. Clone o repositóriogit
+Nota: se estiver usando MS Windows, use WSL2 e instale a distro Linux de sua
+escolha.
+
+1. Clone o repositório git -- o `depth=1` é usado para aquele que optar por
+   obter somente o commit atual ao invés de todos os commits (histórico) do 
+   repositório.
 
         $ git clone https://github.com/RevoluxAI/cap1 --depth=1
 
@@ -58,13 +81,13 @@ Requer a instalação do Python3, R e sistema operacional Linux.
 do pacote, provavelmente é: `python3-venv`.
 
 use o "activate" consoante ao seu terminal em uso. Por exemplo:
-se estiver usando Fish Shell, execute:
+se estiver usando Bash Shell, execute:
 
-        $ . cap1-venv/bin/activate.fish
+        $ . cap1-venv/bin/activate
 
 para mais detalhes, consulte a documentação do python venv. :-)
 
-Se a execução deu certo, seu terminal ficará parecido com isto:
+Se a execução deu certo, o seu terminal ficará parecido com isto:
 
         (cap1-venv) $
 
@@ -77,7 +100,7 @@ Use o `requirements.txt`:
 **Nota:** Caso não tenha o "PIP", instale. O pacote deve constar na mirror
 com o nome: `python3-pip`
 
-# Execução:
+### 1.2. Execução
 
 O projeto pode ser executado tanto por linha de comando ou usando o web server.
 Usando o CLI:
@@ -92,6 +115,72 @@ O script disponibiliza modo de desenvolvedor usando a variável de ambiente
 `DEBUG=true` (padrão: `false`).
 
     $ DEBUG=true python3 web_api.py
+
+
+## 2. Instalação Automática
+
+Optando pela execução automática, não requer a leitura da seção anterior.
+Requer a instalação do Docker ou Podman, apesar de funcionar bem no Windows,
+recomendamos preparar no ambiente Linux -- se estiver usando MS Windows, use
+o Linux sob WSL2.
+
+Nota: recomendamos que utilize Podman porque simplifica a execução do container
+no sistema usando grupos ao invés de inicializar um serviço (daemon) como ocorre
+no Docker -- especialmente, se estiver usando ambiente virtualizado.
+
+Após o sistema operacional Linux preparado, execute:
+
+    $ bash dev.sh -f dev.dockerfile build
+
+Caso a instalação seja sucedida, as últimas mensagens de saída será 
+semanticamente esta:
+
+    Successfully tagged localhost/farmtech-dev:latest
+    13b6e9c7aa672853bf64a6b6ddd235d07e467b5849393aff238ac072d19a8d65                                                                                                                     
+    SUCESSO: Imagem 'farmtech-dev' construída com sucesso!                                                                                                                               
+
+Assim, a imagem do container OCI está pronto para execução.
+
+### 2.1. Execução
+
+Obtido a imagem do container OCI. Use a mesma tecnologia de containerização que
+foi utilizada para montar a imagem do container. A ferramenta faz a
+identificação automática do Docker ou Podman instalado e acessível no ambiente.
+
+Execute a imagem para inicializar o container:
+
+Podman
+
+    $ podman run -it -p 5000:5000 --name techfarm  localhost/farmtech-dev:latest
+
+Docker
+
+    $ docker run -it -p 5000:5000 --name techfarm farmtech-dev:latest
+
+Caso der certo, depará com o terminal semelhante a este:
+
+    FarmTech Solutions - Ambiente de Desenvolvimento
+    Comandos úteis:
+      python web_api.py        # Iniciar aplicação  
+      python -m pytest         # Executar testes  
+      ipython                  # Shell Python interativo 
+    root@26859254432b:/app#
+
+Chegado até aqui, basta executar a aplicação:
+
+WEB SERVER:
+
+    $ python3 web_api.py
+
+O script disponibiliza modo de desenvolvedor usando a variável de ambiente
+`DEBUG=true` (padrão: `false`).
+
+    $ DEBUG=true python3 web_api.py
+
+
+CLI:
+
+    $ python main.py
 
 ---
 
@@ -131,7 +220,8 @@ Estas recomendações devem ser ajustadas conforme análise de solo,condições
 climáticas específicas e objetivo do cultivo (açúcar, etanol ou forragem).
 
 
-### Referências:
+# Referências
+
 1. [FIAP ON; Cap 1 - Play na sua carreira IA](https://on.fiap.com.br/mod/assign/view.php?id=450291&c=12305)
 2. [Repositório Alice; Artigo Científico; Cap 8 - Uso de veículos aéreos não 
 tripulados (VANT) em Agricultura de Precisão](https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/1003485/1/CAP8.pdf)
