@@ -1,0 +1,154 @@
+/**
+ * Estilos personalizados para cartões de cultura
+ * Fornece melhorias visuais para a exibição de culturas agrícolas
+ */
+
+/* Cartão de cultura com efeitos avançados */
+.culture-card {
+    transition: all 0.3s ease;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.culture-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Cabeçalho do cartão com degradê */
+.culture-card .card-header {
+    border-bottom: none;
+    padding: 0.75rem 1rem;
+    position: relative;
+}
+
+/* Estilos específicos por tipo de cultura */
+.culture-card.soja .card-header {
+    background: linear-gradient(90deg, #198754 0%, #20c997 100%);
+    color: white;
+}
+
+.culture-card.cana .card-header {
+    background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+    color: white;
+}
+
+/* Badge de ID com efeito de destaque */
+.culture-id-badge {
+    font-weight: bold;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.culture-id-badge:hover {
+    transform: scale(1.1);
+}
+
+.culture-id-badge.soja {
+    background-color: #198754;
+    color: white;
+}
+
+.culture-id-badge.cana {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.culture-id-badge i {
+    margin-right: 0.25rem;
+    font-size: 0.7rem;
+}
+
+/* Corpo do cartão com sombras sutis */
+.culture-card .card-body {
+    padding: 1.25rem;
+    background-color: #ffffff;
+}
+
+/* Rodapé do cartão com bordas arredondadas */
+.culture-card .card-footer {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-top: none;
+    padding: 0.75rem 1.25rem;
+}
+
+/* Badges do rodapé com efeitos */
+.culture-card .badge {
+    transition: all 0.2s ease;
+    font-weight: 500;
+    padding: 0.4rem 0.6rem;
+}
+
+.culture-card .badge:hover {
+    transform: scale(1.05);
+}
+
+/* Informações específicas da cultura */
+.culture-info-item {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.culture-info-item i {
+    margin-right: 0.5rem;
+    width: 1.2rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* Estilo para cultura analisada */
+.culture-card.analyzed {
+    border-left: 4px solid #198754;
+}
+
+/* Estilo para cultura com alerta de parâmetros */
+.culture-card.has-alerts {
+    border-left: 4px solid #ffc107;
+}
+
+/* Menu de ações */
+.culture-card .dropdown-menu {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+
+.culture-card .dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.culture-card .dropdown-item:hover {
+    background-color: #f8f9fa;
+    padding-left: 1.2rem;
+}
+
+.culture-card .dropdown-item.text-danger:hover {
+    background-color: #fff5f5;
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 768px) {
+    .culture-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .culture-card .card-header {
+        padding: 0.6rem 0.8rem;
+    }
+    
+    .culture-id-badge {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+

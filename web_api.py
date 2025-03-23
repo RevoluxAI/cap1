@@ -14,19 +14,22 @@ from flask_cors import CORS
 from controllers.culture_controller import CultureController
 from controllers.menu_controller import MenuController
 
-# Configuração de logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# configuração de logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Inicialização dos controladores
+# inicialização dos controladores
 culture_controller = CultureController()
 menu_controller = MenuController(culture_controller)
 
-# Inicialização do Flask
+# inicialização do Flask
 app = Flask(__name__)
 CORS(app)  # Habilitar CORS para todas as rotas
 
-# Diretório para servir arquivos estáticos (frontend)
+# diretório para servir arquivos estáticos (frontend)
 static_folder = os.path.join(os.path.dirname(__file__), 'static')
 os.makedirs(static_folder, exist_ok=True)
 
@@ -41,13 +44,13 @@ def get_cultures():
 def create_culture():
     """Endpoint para criar uma nova cultura"""
     try:
-        # Obter dados do formulário ou JSON
+        # obtém dados do formulário ou JSON
         if request.is_json:
             form_data = request.json
         else:
             form_data = request.form.to_dict()
 
-        # Processar criação da cultura
+        # processa criação da cultura
         result = menu_controller.create_culture(form_data)
         return jsonify(result)
     except Exception as e:
@@ -63,17 +66,22 @@ def get_culture(culture_id):
     """Endpoint para obter uma cultura específica"""
     return jsonify(menu_controller.get_culture(culture_id))
 
+@app.route('/api/cultures/all', methods=['GET'])
+def get_all_cultures():
+    """Endpoint para listar todas as culturas, incluindo as deletadas"""
+    return jsonify(menu_controller.get_all_cultures())
+
 @app.route('/api/cultures/<int:culture_id>', methods=['PUT', 'PATCH'])
 def update_culture(culture_id):
     """Endpoint para atualizar uma cultura"""
     try:
-        # Obter dados do formulário ou JSON
+        # obtém dados do formulário ou JSON
         if request.is_json:
             form_data = request.json
         else:
             form_data = request.form.to_dict()
 
-        # Processar atualização da cultura
+        # processa atualização da cultura
         result = menu_controller.update_culture(culture_id, form_data)
         return jsonify(result)
     except Exception as e:
@@ -99,8 +107,8 @@ def get_weather_analysis(culture_id):
     """Endpoint para obter análise meteorológica e recomendações para uma cultura"""
     return jsonify(menu_controller.get_weather_analysis(culture_id))
 
-# === ROTAS PARA FRONTEND ===
 
+# === ROTAS PARA FRONTEND ===
 @app.route('/', methods=['GET'])
 def index():
     """Rota para servir a página principal do frontend"""
@@ -111,10 +119,10 @@ def serve_static(path):
     """Rota para servir arquivos estáticos do frontend"""
     return send_from_directory(static_folder, path)
 
-# === INICIALIZAÇÃO DO SERVIDOR ===
 
+# === INICIALIZAÇÃO DO SERVIDOR ===
 if __name__ == "__main__":
-    # Configurações para o servidor de desenvolvimento
+    # configurações para o servidor de desenvolvimento
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
 
@@ -128,6 +136,6 @@ if __name__ == "__main__":
     print("  GET    /api/cultures/:id/lines   - Calcular linhas de plantio")
     print("  GET    /api/cultures/:id/weather-analysis - Obter análise meteorológica")
 
-    # Iniciar servidor
+    # inicia servidor
     app.run(host='0.0.0.0', port=port, debug=debug)
 

@@ -18,7 +18,7 @@ class MenuController:
         """Inicializa o controlador do menu"""
         self.culture_controller = culture_controller
         self.is_running = False
-        self.data = []  # vetor de dados para armazenamento
+        self.data = []  # Vetor de dados para armazenamento
 
     def run(self, mode="cli") -> Dict[str, Any]:
         """
@@ -34,7 +34,11 @@ class MenuController:
             return self._run_cli_mode()
         else:
             # em modo API, apenas retorna o estado atual
-            return {"status": "success", "data": self.data, "message": "Dados disponíveis para processamento"}
+            return {
+                "status": "success",
+                "data": self.data,
+                "message": "Dados disponíveis para processamento"
+            }
 
     def _run_cli_mode(self) -> Dict[str, Any]:
         """
@@ -44,7 +48,11 @@ class MenuController:
             Dict[str, Any]: Dados resultantes das operações
         """
         self.is_running = True
-        result = {"status": "success", "data": None, "message": "Operação concluída com sucesso"}
+        result = {
+            "status": "success",
+            "data": None,
+            "message": "Operação concluída com sucesso"
+        }
 
         while self.is_running:
             self._display_menu()
@@ -59,7 +67,10 @@ class MenuController:
                     break
 
                 # se a última operação foi bem sucedida e gerou dados, atualiza o resultado final
-                if result.get("status") == "success" and result.get("data") is not None:
+                if (
+                    result.get("status") == "success" 
+                    and result.get("data") is not None 
+                ):
                     if isinstance(result["data"], list):
                         self.data = result["data"]
 
@@ -82,7 +93,11 @@ class MenuController:
                 input("\nPressione Enter para continuar...")
 
         # retorna os dados coletados durante a execução
-        return {"status": "success", "data": self.data, "message": "Operação finalizada pelo usuário"}
+        return {
+            "status": "success",
+            "data": self.data,
+            "message": "Operação finalizada pelo usuário"
+        }
 
     def _display_menu(self) -> None:
         """Exibe o menu principal (apenas para modo CLI)"""
@@ -106,7 +121,11 @@ class MenuController:
         Returns:
             Dict[str, Any]: Resultado da operação
         """
-        result = {"status": "error", "data": None, "message": "Opção não implementada"}
+        result = {
+            "status": "error",
+            "data": None,
+            "message": "Opção não implementada"
+        }
 
         if choice == 1:
             # entrada de dados
@@ -123,17 +142,20 @@ class MenuController:
         elif choice == 5:
             # sair do programa
             self.is_running = False
-            result = {"status": "success", "data": self.data, "message": "Programa encerrado"}
+            result = {
+                "status": "success",
+                "data": self.data,
+                "message": "Programa encerrado"
+            }
         else:
             result["message"] = "Opção inválida. Por favor, escolha uma opção entre 1 e 5."
 
         return result
 
     # === API WEB ENDPOINTS ===
-
     def create_culture(self, form_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Endpoint de API para criar uma nova cultura a partir de dados de formulário
+        Endpoint de API para criar uma nova cultura
 
         Args:
             form_data (Dict[str, Any]): Dados do formulário web
@@ -142,19 +164,22 @@ class MenuController:
             Dict[str, Any]: Resultado da operação
         """
         try:
-            # extrai e validar os dados do formulário
+            # extrai o tipo de cultura
             culture_type = int(form_data.get('culture_type', 0))
             if culture_type not in [1, 2]:
-                return {"status": "error", "data": None, "message": "Tipo de cultura inválido (deve ser 1 para Soja ou 2 para Cana-de-Açúcar)"}
+                return {
+                    "status": "error", 
+                    "data": None, 
+                    "message": (
+                        "Tipo de cultura inválido (deve ser 1 para ",
+                        "Soja ou 2 para Cana-de-Açúcar)"
+                    ),
+                }
 
+            # extrai outros parâmetros
             area = float(form_data.get('area', 0))
-            if area <= 0:
-                return {"status": "error", "data": None, "message": "Área deve ser maior que zero"}
-
             espacamento = float(form_data.get('espacamento', 0))
-            if espacamento <= 0:
-                return {"status": "error", "data": None, "message": "Espaçamento deve ser maior que zero"}
-
+            
             # parâmetros adicionais específicos para cada cultura
             additional_params = {}
             if culture_type == 1:  # Soja
@@ -167,7 +192,9 @@ class MenuController:
             if isinstance(irrigacao_value, bool):
                 with_irrigation = irrigacao_value
             else:
-                with_irrigation = str(irrigacao_value).lower() in ['true', 'sim', 's', 'yes', 'y', '1', 'on']
+                with_irrigation = str(irrigacao_value).lower() in [
+                    'true', 'sim', 's', 'yes', 'y', '1', 'on'
+                ]
 
             # cria cultura usando o controlador
             culture_data = self.culture_controller.create_culture(
@@ -178,13 +205,58 @@ class MenuController:
                 **additional_params
             )
 
-            # adiciona ao vetor de dados
-            self.data.append(culture_data)
-
-            # verifica se existem recomendações específicas para exibir na resposta
-            message = f"Cultura adicionada com sucesso. ID: {len(self.data) - 1}"
+            # verifica se há um ID sugerido pelo frontend
+            suggested_id = form_data.get('suggested_id')
+            if suggested_id:
+                # verifica se o id sugerido está no formato esperado
+                id_pattern = r'^(soja|cana)_(\d+)$'
+                if re.match(id_pattern, suggested_id):
+                    # adiciona o ID sugerido aos dados da cultura
+                    culture_data['id'] = suggested_id
             
-            # adiciona mensagens específicas para cana-de-açúcar
+            # adiciona ao vetor de dados
+            # verifica se há uma posição previamente deletada que pode reutilizar
+            reused_position = None
+            
+            # se existe um ID sugerido, tenta reutilizar a posição exata
+            if suggested_id and len(self.data) > 0:
+                # extrai o número do ID sugerido
+                match = re.match(r'^(soja|cana)_(\d+)$', suggested_id)
+                if match:
+                    type_prefix, id_num = match.groups()
+                    id_num = int(id_num)
+                    
+                    # procura uma posição disponível com esse ID
+                    for i, item in enumerate(self.data):
+                        if item.get('deleted', False) and (
+                            (item.get('id') == suggested_id) or
+                            (i == id_num and item.get('tipo') == type_prefix)
+                        ):
+                            reused_position = i
+                            break
+            
+            # se não encontrou posição específica para 
+            # reutilizar, procura qualquer posição
+            if reused_position is None:
+                for i, item in enumerate(self.data):
+                    if item.get('deleted', False):
+                        reused_position = i
+                        break
+            
+            # se encontrou uma posição para reutilizar,
+            # substitui a cultura deletada
+            if reused_position is not None:
+                self.data[reused_position] = culture_data
+                position = reused_position
+            else:
+                # caso contrário, adiciona ao final do array
+                self.data.append(culture_data)
+                position = len(self.data) - 1
+            
+            # mensagem de sucesso
+            message = f"Cultura adicionada com sucesso. ID: {position}"
+            
+            # verifica se existem recomendações específicas para exibir na resposta
             if culture_type == 2 and "recomendacoes" in culture_data:
                 recomendacoes = culture_data["recomendacoes"]
                 
@@ -198,10 +270,14 @@ class MenuController:
                     alerts.append(recomendacoes["area"]["mensagem"])
                 
                 if not with_irrigation:
-                    alerts.append("Irrigação é recomendada para cultivo de cana-de-açúcar.")
+                    alerts.append(
+                        "Irrigação é recomendada para cultivo de cana-de-açúcar."
+                    )
                 
                 if alerts:
-                    message += "\n\nRecomendações importantes:\n" + "\n".join(f"- {alert}" for alert in alerts)
+                    message += "\n\nRecomendações importantes:\n" + "\n".join(
+                        f"- {alert}" for alert in alerts
+                    )
 
             return {
                 "status": "success", 
@@ -211,10 +287,19 @@ class MenuController:
             }
 
         except ValueError as e:
-            return {"status": "error", "data": None, "message": f"Erro de formato: {str(e)}"}
+            return {
+                "status": "error", 
+                "data": None, 
+                "message": f"Erro de formato: {str(e)}"
+            }
         except Exception as e:
             logger.error(f"Erro ao processar dados de formulário: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro ao processar: {str(e)}"}
+            return {
+                "status": "error", 
+                "data": None, 
+                "message": f"Erro ao processar: {str(e)}"
+            }
+
 
     def get_cultures(self) -> Dict[str, Any]:
         """
@@ -224,9 +309,32 @@ class MenuController:
             Dict[str, Any]: Dados de todas as culturas
         """
         if not self.data:
-            return {"status": "warning", "data": [], "message": "Nenhuma cultura cadastrada"}
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhuma cultura cadastrada"
+            }
 
-        return {"status": "success", "data": self.data, "message": f"{len(self.data)} culturas encontradas"}
+        # filtrar culturas não deletadas
+        active_cultures = [
+            culture for culture in self.data if not culture.get(
+                "deleted", False
+            )
+        ]
+        
+        if not active_cultures:
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhuma cultura cadastrada"
+            }
+
+        return {
+            "status": "success",
+            "data": active_cultures,
+            "message": f"{len(active_cultures)} culturas encontradas"
+        }
+
 
     def get_culture(self, culture_id: int) -> Dict[str, Any]:
         """
@@ -240,13 +348,67 @@ class MenuController:
         """
         try:
             culture_id = int(culture_id)
-            if 0 <= culture_id < len(self.data):
-                return {"status": "success", "data": self.data[culture_id], "message": "Cultura encontrada"}
-            else:
-                return {"status": "error", "data": None, "message": "Cultura não encontrada"}
+            if not (0 <= culture_id < len(self.data)):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
+            
+            # verificar se a cultura não está deletada
+            if self.data[culture_id].get("deleted", False):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
+                
+            return {
+                "status": "success",
+                "data": self.data[culture_id],
+                "message": "Cultura encontrada"
+            }
         except (ValueError, TypeError):
-            return {"status": "error", "data": None, "message": "ID de cultura inválido"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": "ID de cultura inválido"
+            }
 
+
+    def get_all_cultures(self) -> Dict[str, Any]:
+        """
+        Endpoint de API para obter todas as culturas, incluindo as marcadas como deletadas
+        
+        Returns:
+            Dict[str, Any]: Dados de todas as culturas, incluindo as deletadas
+        """
+        if not self.data:
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhuma cultura cadastrada"
+            }
+        
+        # adiciona flag 'deleted' explicitamente para itens que não a possuem
+        all_cultures = []
+        for culture in self.data:
+            culture_copy = culture.copy() if isinstance(culture, dict) else culture
+            
+            # garante que a propriedade 'deleted' esteja sempre presente
+            if 'deleted' not in culture_copy:
+                culture_copy['deleted'] = False
+                
+            all_cultures.append(culture_copy)
+        
+        return {
+            "status": "success", 
+            "data": all_cultures, 
+            "message": (
+                f"{len(all_cultures)} culturas encontradas ",
+                "(incluindo deletadas)"
+            ),
+        }
 
     def update_culture(self, culture_id: int, form_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -262,7 +424,19 @@ class MenuController:
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
-                return {"status": "error", "data": None, "message": "Cultura não encontrada"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
+                
+            # verifica se a cultura não está deletada
+            if self.data[culture_id].get("deleted", False):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada ou foi excluída"
+                }
 
             # campos que podem ser atualizados
             updateable_fields = ['area', 'espacamento']
@@ -273,7 +447,13 @@ class MenuController:
                 if field in form_data:
                     value = float(form_data[field])
                     if value <= 0:
-                        return {"status": "error", "data": None, "message": f"Valor para {field} deve ser maior que zero"}
+                        return {
+                            "status": "error",
+                            "data": None,
+                            "message": (
+                                f"Valor para {field} deve ser maior que zero"
+                            ),
+                        }
 
                     self.data[culture_id][field] = value
                     updated = True
@@ -285,7 +465,14 @@ class MenuController:
                 updated = True
                 
                 # revalida parâmetros de soja após atualização
-                if updated and ('area' in form_data or 'espacamento' in form_data or 'variedade' in form_data):
+                if (
+                    updated 
+                    and (
+                        'area' in form_data 
+                        or 'espacamento' in form_data 
+                        or 'variedade' in form_data
+                    )
+                ):
                     area = self.data[culture_id].get('area', 0)
                     espacamento = self.data[culture_id].get('espacamento', 0)
                     variedade = self.data[culture_id].get('variedade', 'convencional')
@@ -302,7 +489,14 @@ class MenuController:
                 updated = True
 
                 # revalida parâmetros de cana-de-açúcar após atualização
-                if updated and ('area' in form_data or 'espacamento' in form_data or 'ciclo' in form_data):
+                if (
+                    updated 
+                    and (
+                        'area' in form_data 
+                        or 'espacamento' in form_data 
+                        or 'ciclo' in form_data
+                    )
+                ):
                     area = self.data[culture_id].get('area', 0)
                     espacamento = self.data[culture_id].get('espacamento', 0)
                     ciclo = self.data[culture_id].get('ciclo', 'médio')
@@ -316,7 +510,9 @@ class MenuController:
 
             # atualiza status de irrigação se presente
             if 'irrigacao' in form_data:
-                irrigacao = str(form_data.get('irrigacao', 'false')).lower() in ['true', 'sim', 's', 'yes', 'y', '1', 'on']
+                irrigacao = str(form_data.get('irrigacao', 'false')).lower() in [
+                    'true', 'sim', 's', 'yes', 'y', '1', 'on'
+                ]
                 self.data[culture_id]['irrigacao'] = irrigacao
                 updated = True
                 
@@ -343,7 +539,7 @@ class MenuController:
                     )
                     self.data[culture_id]['recomendacoes'] = recomendacoes
 
-            # recalcular valores necessários se houve atualização
+            # recalcula valores necessários se houve atualização
             if updated and ('area' in form_data or 'espacamento' in form_data):
                 if "linhas_calculadas" in self.data[culture_id]:
                     linhas = self.culture_controller.calculate_lines(culture_id, self.data[culture_id])
@@ -383,14 +579,25 @@ class MenuController:
                     "recommendations": self.data[culture_id].get("recomendacoes")
                 }
             else:
-                return {"status": "warning", "data": self.data[culture_id], "message": "Nenhum campo foi atualizado"}
+                return {
+                    "status": "warning",
+                    "data": self.data[culture_id],
+                    "message": "Nenhum campo foi atualizado"
+                }
 
         except ValueError as e:
-            return {"status": "error", "data": None, "message": f"Erro de formato: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro de formato: {str(e)}"
+            }
         except Exception as e:
             logger.error(f"Erro ao atualizar cultura: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro ao atualizar: {str(e)}"}
-
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro ao atualizar: {str(e)}"
+            }
 
 
     def delete_culture(self, culture_id: int) -> Dict[str, Any]:
@@ -406,22 +613,59 @@ class MenuController:
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
-                return {"status": "error", "data": None, "message": "Cultura não encontrada"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
 
-            # remove a cultura
-            removed_item = self.data.pop(culture_id)
+            # armazena o item a ser removido
+            item = self.data[culture_id]
+            removed_item = item.copy() if isinstance(item, dict) else item
+            
+            # marca a cultura como deletada (em vez de remover do array)
+            # isso evita que os índices das outras culturas mudem
+            self.data[culture_id] = {
+                "deleted": True,
+                "id": culture_id,
+                "tipo": removed_item.get("tipo", "Desconhecida")
+            }
+
+            # remove do cache de análise, se existir
+            # esta informação será incluída na resposta para o frontend
+            removed_info = {
+                "removed": removed_item, 
+                "remaining": sum(
+                    1 
+                    for item in self.data 
+                    if not item.get("deleted", False)
+                ),
+                "removed_id": culture_id,
+            }
 
             return {
                 "status": "success", 
-                "data": {"removed": removed_item, "remaining": len(self.data)}, 
-                "message": f"Cultura {removed_item.get('tipo', '#' + str(culture_id))} removida com sucesso"
+                "data": removed_info, 
+                "message": (
+                    f"Cultura {removed_item.get('tipo', '#' + str(culture_id))}",
+                    " removida com sucesso"
+                ),
             }
 
         except (ValueError, TypeError):
-            return {"status": "error", "data": None, "message": "ID de cultura inválido"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": "ID de cultura inválido"
+            }
         except Exception as e:
             logger.error(f"Erro ao deletar cultura: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro ao deletar: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro ao deletar: {str(e)}"
+            }
+
 
     def calculate_culture_lines(self, culture_id: int) -> Dict[str, Any]:
         """
@@ -436,7 +680,19 @@ class MenuController:
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
-                return {"status": "error", "data": None, "message": "Cultura não encontrada"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
+
+            # verifica se a cultura não está deletada
+            if self.data[culture_id].get("deleted", False):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada ou foi excluída"
+                }
 
             # calcula linhas
             linhas = self.culture_controller.calculate_lines(culture_id, self.data[culture_id])
@@ -458,7 +714,12 @@ class MenuController:
             return {"status": "error", "data": None, "message": "ID de cultura inválido"}
         except Exception as e:
             logger.error(f"Erro ao calcular linhas: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro ao calcular: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro ao calcular: {str(e)}"
+            }
+
 
     def get_weather_analysis(self, culture_id: int) -> Dict[str, Any]:
         """
@@ -473,26 +734,49 @@ class MenuController:
         try:
             culture_id = int(culture_id)
             if not (0 <= culture_id < len(self.data)):
-                return {"status": "error", "data": None, "message": "Cultura não encontrada"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada"
+                }
+
+            # verifica se a cultura não está deletada
+            if self.data[culture_id].get("deleted", False):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Cultura não encontrada ou foi excluída"
+                }
 
             # obtém análise meteorológica através do controlador de cultura
             weather_data = self.culture_controller.get_weather_data()
             if not weather_data:
-                return {"status": "error", "data": None, "message": "Não foi possível obter dados meteorológicos"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Não foi possível obter dados meteorológicos"
+                }
 
             # obtém recomendações baseadas nos dados meteorológicos e da cultura
-            recommendations = self.culture_controller.get_recommendations(self.data[culture_id], weather_data)
+            recommendations = self.culture_controller.get_recommendations(
+                self.data[culture_id], weather_data
+            )
 
             # extrai dados meteorológicos atuais e análise
             current_weather = self._extract_current_weather(weather_data)
             weather_analysis = self._extract_weather_analysis(weather_data)
             
             # extrai dados específicos para soja se disponíveis
-            soy_specific = self._extract_soy_specific_data(recommendations, self.data[culture_id])
+            soy_specific = self._extract_soy_specific_data(
+                recommendations, self.data[culture_id]
+            )
 
             # adiciona recomendações específicas para cana-de-açúcar
             sugarcane_recommendations = None
-            if self.data[culture_id].get("tipo") == "Cana-de-Açúcar" and "recomendacoes" in self.data[culture_id]:
+            if (
+                self.data[culture_id].get("tipo") == "Cana-de-Açúcar" 
+                and "recomendacoes" in self.data[culture_id]
+            ):
                 sugarcane_recommendations = self.data[culture_id]["recomendacoes"]
 
             # combina os dados para retorno
@@ -515,11 +799,16 @@ class MenuController:
                 "weather_analysis": weather_analysis,
                 # recomendações específicas para cada tipo de cultura
                 "sugarcane_recommendations": sugarcane_recommendations,
-                "soy_specific": soy_specific,  # adiciona o campo soy_specific
+                "soy_specific": soy_specific,
                 # adiciona dados de produtividade e recomendações extras para o frontend
                 "productivity": {
-                    "estimate": self._extract_productivity_estimate(self.data[culture_id], recommendations),
-                    "optimal_period": self._extract_optimal_period(self.data[culture_id], recommendations)
+                    "estimate": self._extract_productivity_estimate(
+                        self.data[culture_id], recommendations
+                    ),
+                    "optimal_period": self._extract_optimal_period(
+                        self.data[culture_id],
+                        recommendations
+                    )
                 },
                 "stats": self._extract_statistics(self.data[culture_id], recommendations)
             }
@@ -531,10 +820,19 @@ class MenuController:
             }
 
         except (ValueError, TypeError):
-            return {"status": "error", "data": None, "message": "ID de cultura inválido"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": "ID de cultura inválido"
+            }
         except Exception as e:
             logger.error(f"Erro ao obter análise meteorológica: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro na análise: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro na análise: {str(e)}"
+            }
+
 
     def _extract_current_weather(self, weather_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -553,9 +851,9 @@ class MenuController:
         if weather_data.get("data") and weather_data["data"].get("weather"):
             weather_array = weather_data["data"]["weather"]
             if isinstance(weather_array, list) and len(weather_array) > 0:
-                return weather_array[0]  # retorna o primeiro item do array
+                return weather_array[0]  # Retorna o primeiro item do array
             elif isinstance(weather_array, dict):
-                return weather_array     # retorna o dicionário diretamente
+                return weather_array  # Retorna o dicionário diretamente
                 
         # verifica estrutura alternativa (dados no nível principal)
         if weather_data.get("weather"):
@@ -666,11 +964,17 @@ class MenuController:
             return recommendations["soy_specific"]
             
         # verifica nas recomendações aninhadas
-        if recommendations and recommendations.get("data") and recommendations["data"].get("soy_specific"):
+        if (
+            recommendations and recommendations.get("data") 
+            and recommendations["data"].get("soy_specific")
+        ):
             return recommendations["data"]["soy_specific"]
             
         # verifica na análise estatística da cultura
-        if culture_data.get("analise_estatistica") and culture_data["analise_estatistica"].get("soy_specific"):
+        if (
+            culture_data.get("analise_estatistica") 
+            and culture_data["analise_estatistica"].get("soy_specific")
+        ):
             return culture_data["analise_estatistica"]["soy_specific"]
             
         # tenta construir um objeto mínimo de dados específicos de soja com base em outras informações
@@ -681,7 +985,8 @@ class MenuController:
                     "sacas_por_hectare": culture_data.get("produtividade_sacas", 0),
                     "total_sacas": culture_data.get("producao_total", 0)
                 },
-                "optimal_planting_period": "Setembro a Novembro",  # Período padrão
+                # período padrão
+                "optimal_planting_period": "Setembro a Novembro",
                 "variety": culture_data.get("variedade", "")
             }
             
@@ -714,30 +1019,48 @@ class MenuController:
             rec_data = recommendations["data"]
 
             # verifica se tem dados de análise estatística (statistical_models)
-            if "statistical_models" in rec_data and "productivity_forecast" in rec_data["statistical_models"]:
+            if (
+                "statistical_models" in rec_data 
+                and "productivity_forecast" in rec_data["statistical_models"]
+            ):
                 forecast = rec_data["statistical_models"]["productivity_forecast"]
                 
-                # regex para extrai valores da produtividade para soja ou cana
+                # regex para extrair valores da produtividade para soja ou cana
                 if culture_data.get("tipo") == "Soja":
-                    match = re.search(r"Produtividade estimada: (\d+\.?\d*) sacas/ha", forecast)
+                    match = re.search(
+                        r"Produtividade estimada: (\d+\.?\d*) sacas/ha",
+                        forecast
+                    )
                 else:
-                    match = re.search(r"Produtividade estimada: (\d+\.?\d*) ton/ha", forecast)
+                    match = re.search(
+                        r"Produtividade estimada: (\d+\.?\d*) ton/ha",
+                        forecast
+                    )
                 
                 if match:
                     result["value"] = float(match.group(1))
                     result["total"] = result["value"] * culture_data.get("area", 0)
 
             # verifica na análise de dados
-            if "data_analysis" in rec_data and "key_metrics" in rec_data["data_analysis"]:
+            if (
+                "data_analysis" in rec_data 
+                and "key_metrics" in rec_data["data_analysis"]
+            ):
                 metrics = rec_data["data_analysis"]["key_metrics"]
                 if "potential_production" in metrics:
                     prod_text = metrics["potential_production"]
                     
-                    # regex para extrai valores com base no tipo de cultura
+                    # regex para extrair valores com base no tipo de cultura
                     if culture_data.get("tipo") == "Soja":
-                        match = re.search(r"(\d+) sacas totais estimadas", prod_text)
+                        match = re.search(
+                            r"(\d+) sacas totais estimadas",
+                            prod_text
+                        )
                     else:
-                        match = re.search(r"(\d+) toneladas totais estimadas", prod_text)
+                        match = re.search(
+                            r"(\d+) toneladas totais estimadas",
+                            prod_text
+                        )
                     
                     if match:
                         result["total"] = int(match.group(1))
@@ -773,10 +1096,16 @@ class MenuController:
             # dados específicos da cultura nas recomendações
             culture_type = culture_data.get("tipo")
             if culture_type == "Soja":
-                if "soy_specific" in rec_data and "optimal_planting_period" in rec_data["soy_specific"]:
+                if (
+                    "soy_specific" in rec_data 
+                    and "optimal_planting_period" in rec_data["soy_specific"]
+                ):
                     return rec_data["soy_specific"]["optimal_planting_period"]
             elif culture_type == "Cana-de-Açúcar":
-                if "sugarcane_specific" in rec_data and "optimal_planting_period" in rec_data["sugarcane_specific"]:
+                if (
+                    "sugarcane_specific" in rec_data 
+                    and "optimal_planting_period" in rec_data["sugarcane_specific"]
+                ):
                     return rec_data["sugarcane_specific"]["optimal_planting_period"]
 
         # verifica em dados da cultura
@@ -791,7 +1120,7 @@ class MenuController:
                 if "optimal_planting_period" in sugarcane_specific:
                     return sugarcane_specific["optimal_planting_period"]
                 
-                # se for cana-de-açúcar, verifica nas recomendações específicas
+                # se for cana-de-açúcar, verificar nas recomendações específicas
                 if "recomendacoes" in culture_data:
                     ciclo = culture_data.get("ciclo", "médio")
                     if ciclo == "curto":
@@ -859,8 +1188,8 @@ class MenuController:
 
         return stats
 
-    # === MÉTODOS CLI ===
 
+    # === MÉTODOS CLI ===
     def _handle_data_input(self) -> Dict[str, Any]:
         """
         Processa a entrada de dados pelo usuário (modo CLI)
@@ -876,7 +1205,11 @@ class MenuController:
         try:
             culture_type = int(input("Digite o número da cultura: "))
             if culture_type not in [1, 2]:
-                return {"status": "error", "data": None, "message": "Tipo de cultura inválido"}
+                return {
+                    "status": "error",
+                    "data": None,
+                    "message": "Tipo de cultura inválido"
+                }
 
             area = float(input("Área de plantio (hectares): "))
             espacamento = float(input("Espaçamento entre linhas (metros): "))
@@ -938,14 +1271,25 @@ class MenuController:
             return {
                 "status": "success", 
                 "data": self.data, 
-                "message": f"Cultura adicionada com sucesso. ID: {len(self.data) - 1}"
+                "message": (
+                    "Cultura adicionada com sucesso. ",
+                    f"ID: {len(self.data) - 1}"
+                ),
             }
 
         except ValueError as e:
-            return {"status": "error", "data": None, "message": f"Erro de formato: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro de formato: {str(e)}"
+            }
         except Exception as e:
             logger.error(f"Erro ao processar entrada de dados: {str(e)}")
-            return {"status": "error", "data": None, "message": f"Erro ao processar entrada: {str(e)}"}
+            return {
+                "status": "error",
+                "data": None,
+                "message": f"Erro ao processar entrada: {str(e)}"
+            }
 
     def _handle_data_output(self) -> Dict[str, Any]:
         """
@@ -955,7 +1299,11 @@ class MenuController:
             Dict[str, Any]: Resultado da operação
         """
         if not self.data:
-            return {"status": "warning", "data": [], "message": "Nenhum dado disponível para visualização"}
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhum dado disponível para visualização"
+            }
 
         print("\n----- VISUALIZAÇÃO DE DADOS -----")
         for i, item in enumerate(self.data):
@@ -977,17 +1325,36 @@ class MenuController:
                     return {
                         "status": "success", 
                         "data": self.data, 
-                        "message": f"Cálculo realizado. Cultura #{idx} possui {linhas} linhas de plantio."
+                        "message": (
+                            "Cálculo realizado. Cultura ",
+                            f"#{idx} possui {linhas} linhas de plantio."
+                        ),
                     }
                 else:
-                    return {"status": "error", "data": self.data, "message": "Índice inválido"}
+                    return {
+                        "status": "error",
+                        "data": self.data,
+                        "message": "Índice inválido"
+                    }
             except ValueError:
-                return {"status": "error", "data": self.data, "message": "Formato inválido para índice"}
+                return {
+                    "status": "error",
+                    "data": self.data,
+                    "message": "Formato inválido para índice"
+                }
             except Exception as e:
-                return {"status": "error", "data": self.data, "message": f"Erro no cálculo: {str(e)}"}
+                return {
+                    "status": "error",
+                    "data": self.data,
+                    "message": f"Erro no cálculo: {str(e)}"
+                }
 
         # retorna os dados atuais
-        return {"status": "success", "data": self.data, "message": "Dados visualizados com sucesso"}
+        return {
+            "status": "success",
+            "data": self.data,
+            "message": "Dados visualizados com sucesso"
+        }
 
     def _handle_data_update(self) -> Dict[str, Any]:
         """
@@ -997,7 +1364,11 @@ class MenuController:
             Dict[str, Any]: Resultado da operação
         """
         if not self.data:
-            return {"status": "warning", "data": [], "message": "Nenhum dado disponível para atualização"}
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhum dado disponível para atualização"
+            }
 
         print("\n----- ATUALIZAÇÃO DE DADOS -----")
         for i, item in enumerate(self.data):
@@ -1044,7 +1415,10 @@ class MenuController:
                     return {
                         "status": "success", 
                         "data": self.data, 
-                        "message": f"Área da cultura #{idx} atualizada para {new_value} ha"
+                        "message": (
+                            f"Área da cultura #{idx} atualizada ",
+                            f"para {new_value} ha"
+                        ),
                     }
 
                 elif update_choice == 2:
@@ -1072,7 +1446,10 @@ class MenuController:
                     return {
                         "status": "success", 
                         "data": self.data, 
-                        "message": f"Espaçamento da cultura #{idx} atualizado para {new_value} m"
+                        "message": (
+                            f"Espaçamento da cultura #{idx} ",
+                            f"atualizado para {new_value} m"
+                        ),
                     }
                 
                 # opções específicas para cana-de-açúcar
@@ -1105,7 +1482,10 @@ class MenuController:
                     return {
                         "status": "success", 
                         "data": self.data, 
-                        "message": f"Ciclo da cultura #{idx} atualizado para {new_ciclo}"
+                        "message": (
+                            f"Ciclo da cultura #{idx} ",
+                            f"atualizado para {new_ciclo}"
+                        ),
                     }
                 
                 elif update_choice == 4 and self.data[idx].get("tipo") == "Cana-de-Açúcar":
@@ -1132,18 +1512,37 @@ class MenuController:
                     return {
                         "status": "success", 
                         "data": self.data, 
-                        "message": f"Sistema de irrigação da cultura #{idx} {'ativado' if new_irrigation else 'desativado'}"
+                        "message": (
+                            f"Sistema de irrigação da cultura #{idx} ",
+                            f"{'ativado' if new_irrigation else 'desativado'}"
+                        ),
                     }
                 else:
-                    return {"status": "error", "data": self.data, "message": "Opção de atualização inválida"}
+                    return {
+                        "status": "error",
+                        "data": self.data,
+                        "message": "Opção de atualização inválida"
+                    }
             else:
-                return {"status": "error", "data": self.data, "message": "Índice inválido"}
+                return {
+                    "status": "error",
+                    "data": self.data,
+                    "message": "Índice inválido"
+                }
 
         except ValueError:
-            return {"status": "error", "data": self.data, "message": "Formato inválido para entrada"}
+            return {
+                "status": "error",
+                "data": self.data,
+                "message": "Formato inválido para entrada"
+            }
         except Exception as e:
             logger.error(f"Erro ao atualizar dados: {str(e)}")
-            return {"status": "error", "data": self.data, "message": f"Erro ao atualizar: {str(e)}"}
+            return {
+                "status": "error",
+                "data": self.data,
+                "message": f"Erro ao atualizar: {str(e)}"
+            }
 
     def _handle_data_deletion(self) -> Dict[str, Any]:
         """
@@ -1153,7 +1552,11 @@ class MenuController:
             Dict[str, Any]: Resultado da operação
         """
         if not self.data:
-            return {"status": "warning", "data": [], "message": "Nenhum dado disponível para deleção"}
+            return {
+                "status": "warning",
+                "data": [],
+                "message": "Nenhum dado disponível para deleção"
+            }
 
         print("\n----- DELEÇÃO DE DADOS -----")
         for i, item in enumerate(self.data):
@@ -1165,21 +1568,40 @@ class MenuController:
             idx = int(input("\nDigite o número da cultura para deletar (ou -1 para cancelar): "))
 
             if idx == -1:
-                return {"status": "info", "data": self.data, "message": "Operação de deleção cancelada"}
+                return {
+                    "status": "info",
+                    "data": self.data,
+                    "message": "Operação de deleção cancelada"
+                }
 
             if 0 <= idx < len(self.data):
                 removed_item = self.data.pop(idx)
                 return {
                     "status": "success", 
                     "data": self.data, 
-                    "message": f"Cultura {removed_item.get('tipo', '#' + str(idx))} removida com sucesso"
+                    "message": (
+                        f"Cultura {removed_item.get('tipo', '#' + str(idx))} ",
+                        "removida com sucesso"
+                    ),
                 }
             else:
-                return {"status": "error", "data": self.data, "message": "Índice inválido"}
+                return {
+                    "status": "error",
+                    "data": self.data,
+                    "message": "Índice inválido"
+                }
 
         except ValueError:
-            return {"status": "error", "data": self.data, "message": "Formato inválido para índice"}
+            return {
+                "status": "error",
+                "data": self.data,
+                "message": "Formato inválido para índice"
+            }
         except Exception as e:
             logger.error(f"Erro ao deletar dados: {str(e)}")
-            return {"status": "error", "data": self.data, "message": f"Erro ao deletar: {str(e)}"}
+            return {
+                "status": "error",
+                "data": self.data,
+                "message": f"Erro ao deletar: {str(e)}"
+            }
 
