@@ -1,0 +1,6 @@
+#!/bin/bash
+
+curl -X POST http://localhost:5000/api/cultures/generate \
+         -H "Content-Type: application/json" \
+         -d '{"culture_type": 1, "num_samples": '$1'}'
+

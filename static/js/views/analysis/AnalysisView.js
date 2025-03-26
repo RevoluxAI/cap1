@@ -1,9 +1,7 @@
-/* * * *
- *
+/**
  * Coordenador principal para visualização de análises
  * Orquestra os diferentes componentes especializados
- *
- * * * */
+ */
 import { TabsComponent } from './components/TabsComponent.js';
 import { WeatherComponent } from './components/WeatherComponent.js';
 import { RecommendationsComponent } from './components/RecommendationsComponent.js';
@@ -14,7 +12,7 @@ import { SugarcaneComponent } from './components/culture/SugarcaneComponent.js';
 export class AnalysisView {
     /**
      * Inicializa a visualização de análise principal
-     **/
+     */
     constructor() {
         // elementos principais da UI
         this.selectPromptElement = document.getElementById('analysis-select-prompt');
@@ -48,7 +46,7 @@ export class AnalysisView {
     /**
      * Inicializa os componentes e configura os eventos
      * @private
-     **/
+     */
     _initialize() {
         if (!this._validateDomElements()) {
             console.error('AnalysisView: Falha na inicialização - elementos DOM necessários não encontrados');
@@ -89,7 +87,7 @@ export class AnalysisView {
      * Valida se todos os elementos DOM necessários estão presentes
      * @returns {boolean} - True se todos os elementos estão presentes
      * @private
-     **/
+     */
     _validateDomElements() {
         const requiredElements = [
             this.selectPromptElement,
@@ -106,7 +104,7 @@ export class AnalysisView {
     /**
      * Configura o evento de cópia de JSON
      * @private
-     **/
+     */
     _setupJsonCopyEvent() {
         const copyButton = document.getElementById('btn-copy-json');
         if (copyButton && this.jsonElement) {
@@ -128,10 +126,10 @@ export class AnalysisView {
      * @param {string} newTabId - ID da nova aba
      * @param {string} previousTabId - ID da aba anterior
      * @private
-     **/
+     */
     _handleTabChange(newTabId, previousTabId) {
         // atualiza a visualização para a nova aba, se necessário
-        // por exemplo, redimensionar gráficos na aba de estatísticas
+        // por exemplo, redimensiona gráficos na aba de estatísticas
         if (newTabId === '#tab-stats' && window.statsChart) {
             setTimeout(() => {
                 if (window.statsChart.resize) {
@@ -144,7 +142,7 @@ export class AnalysisView {
     /**
      * Exibe o prompt de seleção de cultura
      * @param {string} message - Mensagem a ser exibida
-     **/
+     */
     showSelectionPrompt(message = 'Selecione uma cultura na aba "Culturas" para visualizar a análise.') {
         if (!this.initialized) return;
         
@@ -165,7 +163,7 @@ export class AnalysisView {
     
     /**
      * Exibe mensagem de carregamento
-     **/
+     */
     showLoading() {
         if (!this.initialized) return;
         
@@ -190,7 +188,7 @@ export class AnalysisView {
      * Ativa uma aba específica
      * @param {string} tabId - ID da aba a ser ativada
      * @returns {boolean} - True se a aba foi ativada com sucesso
-     **/
+     */
     activateTab(tabId) {
         if (!this.componentsReady) {
             console.warn('AnalysisView: Tentativa de ativar aba com componentes não inicializados');
@@ -200,10 +198,13 @@ export class AnalysisView {
         return this.tabsComponent.activateTab(tabId);
     }
     
+
+
+
     /**
      * Renderiza a análise com os dados fornecidos
      * @param {AnalysisModel} analysisModel - Modelo de análise
-     **/
+     */
     renderAnalysis(analysisModel) {
         console.log("Renderizando análise:", analysisModel);
         console.log("isComplete():", analysisModel.isComplete());
@@ -234,6 +235,21 @@ export class AnalysisView {
         // renderiza JSON para aba de dados brutos
         document.getElementById('json-data').textContent = JSON.stringify(analysisModel, null, 2);
         
+        // extrair e processar estatísticas formatadas se disponíveis
+        const stats = analysisModel.stats || {};
+        
+        // verifica se há estatísticas formatadas ou análises estatísticas
+        if (culture.estatisticas_formatadas || culture.analise_estatistica) {
+            // adiciona ao objeto stats para passar ao componente de estatísticas
+            stats.estatisticas_formatadas = culture.estatisticas_formatadas || 
+                                            (culture.analise_estatistica && culture.analise_estatistica.input_summary) || 
+                                            {};
+            
+            stats.explicacoes_estatisticas = culture.explicacoes_estatisticas || {};
+            
+            console.log("Estatísticas formatadas encontradas:", stats.estatisticas_formatadas);
+        }
+        
         // ORDEM CORRETA DE RENDERIZAÇÃO:
         // 1. Renderiza componentes específicos de cultura
         this._renderCultureSpecificComponents(analysisModel, culture);
@@ -244,8 +260,8 @@ export class AnalysisView {
         // 3. Renderiza informações meteorológicas
         this.renderWeatherInfo(analysisModel);
         
-        // 4. Renderiza estatísticas
-        this.renderCultureStats(analysisModel);
+        // 4. Renderiza estatísticas - INFO: passando as estatísticas processadas
+        this.renderCultureStats(analysisModel, stats);
         
         // exibe o conteúdo da análise
         document.getElementById('analysis-select-prompt').style.display = 'none';
@@ -255,12 +271,15 @@ export class AnalysisView {
         this.activateTab('#tab-recommendations');
     }
 
+
+
+
     /**
      * Renderiza componentes específicos de cultura
      * @param {AnalysisModel} analysisModel - Modelo de análise
      * @param {Object} culture - Dados da cultura
      * @private
-     **/
+     */
     _renderCultureSpecificComponents(analysisModel, culture) {
         // verificação e log detalhado da estrutura dos dados para facilitar debug
         console.log("Estrutura de dados para componentes de cultura:", {
@@ -314,7 +333,7 @@ export class AnalysisView {
      * @param {Object} culture - Dados da cultura
      * @returns {Object} - Recomendações adaptadas
      * @private
-     **/
+     */
     _adaptSoybeanRecommendations(analysisModel, culture) {
         // se culture.recomendacoes já possui o formato esperado, retorna diretamente
         if (culture.recomendacoes) {
@@ -323,7 +342,7 @@ export class AnalysisView {
         
         const soySpecific = analysisModel.soy_specific || {};
         
-        // constrói objeto de recomendações compatível
+        // cria objeto de recomendações compatível
         return {
             variedade_info: {
                 duracao: "4-5 meses",
@@ -364,7 +383,7 @@ export class AnalysisView {
      * Renderiza todas as recomendações disponíveis
      * @param {AnalysisModel} analysisModel - Modelo de análise
      * @private
-     **/
+     */
     _renderAllRecommendations(analysisModel) {
         if (!analysisModel.recommendations) {
             document.getElementById('recommendation-summary').innerHTML = '<div class="alert alert-warning">Nenhuma recomendação disponível</div>';
@@ -393,7 +412,7 @@ export class AnalysisView {
     /**
      * Renderiza informações meteorológicas
      * @param {AnalysisModel} analysisModel - Modelo de análise
-     **/
+     */
     renderWeatherInfo(analysisModel) {
         if (analysisModel.hasWeatherData && typeof analysisModel.hasWeatherData === 'function' && analysisModel.hasWeatherData()) {
             this.weatherComponent.render(analysisModel);
@@ -420,8 +439,9 @@ export class AnalysisView {
     /**
      * Renderiza estatísticas da cultura
      * @param {AnalysisModel} analysisModel - Modelo de análise
-     **/
-    renderCultureStats(analysisModel) {
+     * @param {Object} processedStats - Estatísticas já processadas (opcional)
+     */
+    renderCultureStats(analysisModel, processedStats = null) {
         const culture = analysisModel.cultureInfo;
         
         if (!culture) {
@@ -429,17 +449,26 @@ export class AnalysisView {
             return;
         }
         
-        // usa o componente StatsComponent para renderizar estatísticas
-        this.statsComponent.render(analysisModel);
+        // use statsComponent para renderizar estatísticas
+        // passar também as estatísticas processadas
+        this.statsComponent.render(analysisModel, processedStats);
         
-        // ajustar o contêiner de gráficos para melhor visualização
+        // ajusta o contêiner de gráficos para melhor visualização
         this._adjustGraphicsContainer();
+        
+        // adiciona evento para exibir a aba de estatísticas quando solicitado
+        document.querySelectorAll('[data-action="show-stats"]').forEach(button => {
+            button.addEventListener('click', () => {
+                this.activateTab('#tab-stats');
+            });
+        });
     }
+
 
     /**
      * Ajusta o contêiner de gráficos para melhor visualização
      * @private
-     **/
+     */
     _adjustGraphicsContainer() {
         // seletor para o contêiner principal de gráficos
         const graphicsContainer = document.querySelector('#tab-stats');
@@ -453,7 +482,7 @@ export class AnalysisView {
             const styleEl = document.createElement('style');
             styleEl.id = 'graphics-container-styles';
             styleEl.textContent = `
-                /* estilos para o contêiner principal de gráficos */
+                /* Estilos para o contêiner principal de gráficos */
                 .graphics-container-responsive {
                     display: flex;
                     flex-direction: column;
@@ -463,13 +492,13 @@ export class AnalysisView {
                     overflow: visible;
                 }
                 
-                /* ajustes para o card do gráfico */
+                /* Ajustes para o card do gráfico */
                 .graphics-container-responsive .card {
                     height: auto;
                     margin-bottom: 1rem;
                 }
                 
-                /* garante que o cabeçalho do gráfico sempre seja visível */
+                /* Garantir que o cabeçalho do gráfico sempre seja visível */
                 .graphics-container-responsive .card-header {
                     position: sticky;
                     top: 0;
@@ -477,19 +506,19 @@ export class AnalysisView {
                     background-color: #fff;
                 }
                 
-                /* melhorar o layout da legenda */
+                /* Melhorar o layout da legenda */
                 .graphics-container-responsive .card-footer {
                     padding: 0.5rem !important;
                 }
                 
-                /* garante que a tab de estatísticas tenha altura suficiente */
+                /* Garantir que a tab de estatísticas tenha altura suficiente */
                 #tab-stats {
                     min-height: 500px;
                     height: auto !important;
                     overflow: visible;
                 }
                 
-                /* ajustes para telas pequenas */
+                /* Ajustes para telas pequenas */
                 @media (max-width: 768px) {
                     .graphics-container-responsive .card-body {
                         padding: 0.5rem;
@@ -519,7 +548,7 @@ export class AnalysisView {
             statsChart.style.overflow = 'visible';
         }
         
-        // certifica que o gráfico é reajustado quando a tab é mostrada
+        // certifique-se que o gráfico é reajustado quando a tab é mostrada
         document.querySelectorAll('#analysisTabs .nav-link').forEach(tab => {
             tab.addEventListener('shown.bs.tab', (e) => {
                 if (e.target.getAttribute('href') === '#tab-stats') {
@@ -538,7 +567,7 @@ export class AnalysisView {
      * Renderiza recomendações gerais
      * @param {AnalysisModel} analysisModel - Modelo de análise completo
      * @private
-     **/
+     */
     _renderRecommendations(analysisModel) {
         // verifica se o método existe no objeto antes de chamar
         if (analysisModel && typeof analysisModel.hasRecommendations === 'function' && analysisModel.hasRecommendations()) {
@@ -561,7 +590,7 @@ export class AnalysisView {
      * Renderiza a seção de monitoramento e otimização
      * @param {Object} recommendations - Dados de recomendações
      * @private
-     **/
+     */
     _renderMonitoringOptimization(recommendations) {
         // extrai a seção monitoring_optimization
         let monitoring = null;
@@ -644,7 +673,7 @@ export class AnalysisView {
      * Renderiza a seção de impacto ambiental
      * @param {Object} recommendations - Dados de recomendações
      * @private
-     **/
+     */
     _renderEnvironmentalImpact(recommendations) {
         // extrai a seção environmental_impact
         let environmental = null;
@@ -731,7 +760,7 @@ export class AnalysisView {
      * Renderiza a seção de análise de dados com design melhorado
      * @param {Object} recommendations - Dados de recomendações
      * @private
-     **/
+     */
     _renderDataAnalysis(recommendations) {
         // extrai a seção data_analysis
         let dataAnalysis = null;
@@ -775,7 +804,7 @@ export class AnalysisView {
             }
         }
         
-        // verifica se têm os dados necessários
+        // verifica se há os dados necessários
         const keyMetrics = dataAnalysis.key_metrics || {};
         const efficiencyMetrics = dataAnalysis.efficiency_metrics || {};
         
@@ -888,13 +917,13 @@ export class AnalysisView {
     /**
      * Adiciona estilos CSS necessários para o dashboard de análise
      * @private
-     **/
+     */
     _addDataAnalysisStyles() {
         if (!document.getElementById('data-analysis-styles')) {
             const styleEl = document.createElement('style');
             styleEl.id = 'data-analysis-styles';
             styleEl.textContent = `
-                /* estilos para o dashboard de métricas */
+                /* Estilos para o dashboard de métricas */
                 .dashboard-metrics {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
                 }
@@ -995,7 +1024,7 @@ export class AnalysisView {
                     color: #664d03;
                 }
                 
-                /* responsividade */
+                /* Responsividade */
                 @media (max-width: 768px) {
                     .metrics-grid {
                         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1022,7 +1051,7 @@ export class AnalysisView {
      * Renderiza a seção de modelos estatísticos
      * @param {Object} recommendations - Dados de recomendações
      * @private
-     **/
+     */
     _renderStatisticalModels(recommendations) {
         // extrai a seção statistical_models
         let statModels = null;
@@ -1103,16 +1132,16 @@ export class AnalysisView {
 
     /**
      * Limpa a visualização de análise
-     **/
+     */
     clearAnalysis() {
         if (!this.initialized) return;
         
-        // limpar título e dados principais
+        // limpa título e dados principais
         if (this.titleElement) {
             this.titleElement.innerHTML = '';
         }
         
-        // restaurar elementos auxiliares
+        // restaura elementos auxiliares
         if (this.cultureTypeElement) {
             this.cultureTypeElement.style.display = 'inline-block';
             this.cultureTypeElement.textContent = '';
@@ -1153,7 +1182,7 @@ export class AnalysisView {
     /**
      * Remove seções dinâmicas do DOM
      * @private
-     **/
+     */
     _removeDynamicSections() {
         const dynamicSections = [
             'soybean-recommendations-section',

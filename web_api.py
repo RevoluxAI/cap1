@@ -15,10 +15,7 @@ from controllers.culture_controller import CultureController
 from controllers.menu_controller import MenuController
 
 # configuração de logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # inicialização dos controladores
@@ -33,12 +30,83 @@ CORS(app)  # Habilitar CORS para todas as rotas
 static_folder = os.path.join(os.path.dirname(__file__), 'static')
 os.makedirs(static_folder, exist_ok=True)
 
-# === ROTAS API ===
 
+# === ROTAS API ===
 @app.route('/api/cultures', methods=['GET'])
 def get_cultures():
     """Endpoint para listar todas as culturas"""
     return jsonify(menu_controller.get_cultures())
+
+
+@app.route('/api/cultures/generate', methods=['POST'])
+def generate_random_cultures():
+    """Endpoint para gerar múltiplas culturas aleatórias para análise estatística"""
+    try:
+        # obtém dados do JSON
+        if request.is_json:
+            form_data = request.json
+        else:
+            form_data = request.form.to_dict()
+        
+        # extrai parâmetros obrigatórios e opcionais
+        culture_type = int(form_data.get('culture_type', 0))
+        if culture_type not in [1, 2]:
+            return jsonify({
+                "status": "error",
+                "message": "Tipo de cultura inválido (deve ser 1 para Soja ou 2 para Cana-de-Açúcar)",
+                "data": None
+            }), 400
+        
+        # número de amostras a serem geradas (opcional, padrão: 10)
+        num_samples = int(form_data.get('num_samples', 10))
+        if num_samples <= 0 or num_samples > 100:  # Limitamos a 100 para evitar sobrecarga
+            return jsonify({
+                "status": "error",
+                "message": "Número de amostras deve estar entre 1 e 100",
+                "data": None
+            }), 400
+        
+        # flag para incluir estatísticas na resposta (opcional, padrão: True)
+        with_statistics = form_data.get('with_statistics', 'true').lower() in ['true', 't', '1', 'yes', 'y']
+        
+        # gera culturas aleatórias
+        logger.info(f"Gerando {num_samples} amostras aleatórias de cultura tipo {culture_type}")
+        result = culture_controller.generate_random_cultures(
+            culture_type=culture_type,
+            num_samples=num_samples,
+            with_statistics=with_statistics
+        )
+        
+        # adiciona as culturas geradas à lista de dados do menu_controller
+        if result and "status" in result and result["status"] == "success" and "cultures" in result:
+            for culture in result["cultures"]:
+                # verifica se a cultura já existe na lista pelo ID
+                existing_ids = [c.get("id") for c in menu_controller.data if isinstance(c, dict) and "id" in c]
+                if culture.get("id") not in existing_ids:
+                    menu_controller.data.append(culture)
+            
+            logger.info(f"Adicionadas {len(result['cultures'])} culturas ao menu_controller")
+            
+            # atualiza o resultado para indicar que os dados foram persistidos
+            result["message"] = f"{len(result['cultures'])} culturas geradas e armazenadas com sucesso"
+        
+        return jsonify(result)
+        
+    except ValueError as e:
+        logger.error(f"Erro de formato ao gerar culturas: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Erro de formato: {str(e)}",
+            "data": None
+        }), 400
+    except Exception as e:
+        logger.error(f"Erro ao gerar culturas aleatórias: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Erro interno: {str(e)}",
+            "data": None
+        }), 500
+
 
 @app.route('/api/cultures', methods=['POST'])
 def create_culture():
@@ -136,6 +204,6 @@ if __name__ == "__main__":
     print("  GET    /api/cultures/:id/lines   - Calcular linhas de plantio")
     print("  GET    /api/cultures/:id/weather-analysis - Obter análise meteorológica")
 
-    # inicia servidor
+    # inicializa servidor
     app.run(host='0.0.0.0', port=port, debug=debug)
 
