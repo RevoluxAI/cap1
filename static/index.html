@@ -15,6 +15,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Estilos para o botão de estatísticas nos cartões de cultura */
+        .stats-badge {
+            transition: all 0.2s;
+        }
+
+        .stats-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
         .culture-card {
             transition: transform 0.2s;
             margin-bottom: 20px;
@@ -50,6 +59,66 @@
             border-radius: 5px;
             margin-bottom: 20px;
         }
+
+    .dropdown-item.processing,
+    a.processing {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    /* Animação de fade-out para cartões sendo excluídos */
+    .culture-card.deleting {
+        animation: fadeOut 0.5s ease forwards;
+        pointer-events: none;
+    }
+
+    /* Keyframes para a animação de fade-out */
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
+        }
+    }
+
+    /* Melhorar a acessibilidade do modal de confirmação */
+    .modal-dialog:focus-within {
+        outline: none;
+    }
+
+    .modal-content {
+        border-radius: 0.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .modal-footer .btn {
+        min-width: 100px;
+    }
+
+    /* Corrigir problemas de foco com modais */
+    .modal-open {
+        overflow: hidden;
+        padding-right: 0 !important;
+    }
+
+    .modal {
+        overflow-y: auto !important;
+    }
+
+    /* Aumentar área clicável de botões em dispositivos móveis */
+    @media (max-width: 768px) {
+        .dropdown-item,
+        .btn {
+            padding: 0.5rem 1rem;
+        }
+        
+        .card-footer .badge {
+            padding: 0.4rem 0.6rem;
+        }
+    }
     </style>
 </head>
 <body>
@@ -90,7 +159,7 @@
                 </button>
             </div>
             
-            <!-- formulário de nova cultura -->
+            <!-- Formulário de Nova Cultura -->
             <div class="form-section mb-4" id="culture-form" style="display: none;">
                 <h3 id="form-title">Nova Cultura</h3>
                 <form id="culture-data-form">
@@ -123,7 +192,7 @@
                         </div>
                     </div>
                     
-                    <!-- campos específicos por tipo -->
+                    <!-- Campos Específicos por Tipo -->
                     <div id="soja-fields" style="display: none;">
                         <div class="mb-3">
                             <label for="soja-variedade" class="form-label">Variedade</label>
@@ -167,10 +236,10 @@
         <div id="analysis-view" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 id="analysis-culture-title" class="mb-0">Selecione uma cultura para análise</h2>
-                <!-- o botão de atualização será adicionado aqui dinamicamente pelo JavaScript -->
+                <!-- O botão de atualização será adicionado aqui dinamicamente pelo JavaScript -->
             </div>
             
-            <!-- elementos mantidos apenas para compatibilidade com o JS existente, mas escondidos por CSS -->
+            <!-- Elementos mantidos apenas para compatibilidade com o JS existente, mas escondidos por CSS -->
             <div class="d-none">
                 <div id="analysis-culture-type"></div>
                 <div id="analysis-culture-area"></div>
@@ -328,7 +397,6 @@
             </div>
         </div>
         <!-- Sobre View -->
-            <!-- substituir o conteúdo atual da div about-view no arquivo static/index.html -->
             <div id="about-view" style="display: none;">
                 <div class="row mb-4">
                     <div class="col-12">
@@ -471,7 +539,7 @@
             </div>
 
             <style>
-            /* estilos para a página Sobre */
+            /* Estilos para a página Sobre */
             .divider {
                 height: 3px;
                 width: 60px;
@@ -521,6 +589,9 @@
     
     <!-- Application JavaScript (Modular) -->
     <script type="module" src="js/app.js"></script>
+
+    <!-- Script para aprimoramento de estatísticas -->
+    <script src="js/stats-enhancement.js"></script>
 </body>
 </html>
 

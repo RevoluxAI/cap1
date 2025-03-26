@@ -61,12 +61,6 @@ load_modules <- function(script_dir) {
     }, error = function(e) {
       log_info(paste("ERRO ao carregar módulo", module, ":", e$message))
       log_info(paste("Caminho:", module_path))
-      # retorna erro em JSON no stdout e encerrar
-      cat(jsonlite::toJSON(list(
-        status = "error",
-        message = paste("Erro ao carregar módulo", module, ":", e$message)
-      ), auto_unbox = TRUE, pretty = TRUE))
-      quit(status = 1)
     })
   }
 }
@@ -85,21 +79,78 @@ summarize_input <- function(data) {
     return(list(message = "Nenhum dado numérico encontrado para análise"))
   }
   
-  # calcula estatísticas básicas
+  # cria resultado
   result <- list()
   
+  # para cada campo numérico, calcular estatísticas
   for (field in names(numeric_data)) {
-    value <- numeric_data[[field]]
+    values <- numeric_data[[field]]
     
-    # ignora campos com valores NA
-    if (!is.na(value)) {
-      result[[field]] <- list(
-        mean = value,  # Para um único valor, a média é o próprio valor
-        std_dev = 0,   # Para um único valor, o desvio padrão é zero
-        min = value,
-        max = value
-      )
+    # se for um único valor
+    if (length(values) == 1) {
+      if (!is.na(values)) {
+        result[[field]] <- list(
+          mean = values,
+          median = values,
+          std_dev = 0,   # desvio padrão é zero para um único valor
+          min = values,
+          max = values,
+          n = 1
+        )
+      }
+    } 
+    # se for um vetor de valores
+    else if (length(values) > 1) {
+      # usa a função do módulo estatístico para cálculos avançados
+      # primeiro tente carregar o módulo de estatística se disponível
+      tryCatch({
+        # tenta usar a função do módulo estatístico se disponível
+        if (exists("calculate_basic_stats")) {
+          result[[field]] <- calculate_basic_stats(values)
+        } else {
+          # se o módulo não estiver carregado, calcule manualmente
+          clean_values <- values[!is.na(values)]
+          if (length(clean_values) > 0) {
+            result[[field]] <- list(
+              mean = mean(clean_values),
+              median = median(clean_values),
+              std_dev = sd(clean_values),  # cálculo real do desvio padrão
+              min = min(clean_values),
+              max = max(clean_values),
+              n = length(clean_values)
+            )
+            
+            # adiciona quartis se houver valores suficientes
+            if (length(clean_values) >= 4) {
+              quantiles <- quantile(clean_values, probs = c(0.25, 0.75))
+              result[[field]]$q1 <- quantiles["25%"]
+              result[[field]]$q3 <- quantiles["75%"]
+            }
+          }
+        }
+      }, error = function(e) {
+        # em caso de erro, registra e retorna estatísticas básicas
+        log_info("Erro ao calcular estatísticas avançadas:", e$message)
+        clean_values <- values[!is.na(values)]
+        if (length(clean_values) > 0) {
+          result[[field]] <- list(
+            mean = mean(clean_values),
+            std_dev = sd(clean_values),
+            min = min(clean_values),
+            max = max(clean_values),
+            n = length(clean_values)
+          )
+        }
+      })
     }
+  }
+  
+  # adiciona estatísticas gerais se houver múltiplos campos
+  if (length(result) > 1) {
+    result$summary <- list(
+      fields_analyzed = length(result),
+      fields_names = names(numeric_data)
+    )
   }
   
   return(result)
@@ -136,9 +187,9 @@ calculate_soy_productivity <- function(area, irrigation) {
   # simula variação de produtividade por área
   area_factor <- 1.0
   if (area > 100) {
-    area_factor <- 1.05  # economia de escala para áreas maiores
+    area_factor <- 1.05  # Economia de escala para áreas maiores
   } else if (area < 10) {
-    area_factor <- 0.95  # menor eficiência para áreas muito pequenas
+    area_factor <- 0.95  # Menor eficiência para áreas muito pequenas
   }
   
   return(list(
@@ -290,7 +341,7 @@ get_current_weather <- function(city, country = NULL, api_key = "b3c61c120b5a088
     units = units
   )
   
-  # realiza requisição à API
+  # faz requisição à API
   response <- tryCatch({
     httr::GET(url, query = params)
   }, error = function(e) {
@@ -534,8 +585,9 @@ assess_weather_impact <- function(temperature, humidity, wind_speed, condition) 
 }
 
 # função principal - processa os dados
+# e na função process_data, melhorar o uso das funções estatísticas
 process_data <- function(input_data) {
-  # extrair informações da cultura
+  # extrai informações da cultura
   culture_type <- input_data$tipo
   area <- input_data$area
   irrigation <- input_data$irrigacao
@@ -544,14 +596,61 @@ process_data <- function(input_data) {
   results <- list(
     input_summary = summarize_input(input_data),
     weather_analysis = NULL,
-    recommendations = NULL
+    recommendations = NULL,
+    statistical_analysis = NULL
   )
+  
+  # adiciona análise estatística avançada se houver dados suficientes
+  if (length(input_data) > 0) {
+    # verifica se têm campos numéricos que podem ser analisados
+    numeric_fields <- sapply(input_data, is.numeric)
+    if (sum(numeric_fields) > 0) {
+      # para cada campo numérico, realizar análises adicionais
+      stat_analysis <- list()
+      
+      for (field in names(input_data)[numeric_fields]) {
+        # se o campo tiver múltiplos valores, fazer análises mais complexas
+        if (length(input_data[[field]]) > 1) {
+          # detectar outliers
+          outliers <- tryCatch({
+            detect_outliers(input_data[[field]])
+          }, error = function(e) {
+            log_info("Erro ao detectar outliers:", e$message)
+            NULL
+          })
+          
+          if (!is.null(outliers) && outliers$n_outliers > 0) {
+            stat_analysis[[paste0(field, "_outliers")]] <- outliers
+          }
+          
+          # analisa tendência se tiver dados sequenciais
+          if (exists("analyze_trend")) {
+            trend <- tryCatch({
+              analyze_trend(input_data[[field]])
+            }, error = function(e) {
+              log_info("Erro ao analisar tendência:", e$message)
+              NULL
+            })
+            
+            if (!is.null(trend)) {
+              stat_analysis[[paste0(field, "_trend")]] <- trend
+            }
+          }
+        }
+      }
+      
+      # adiciona análises aos resultados se houver algo relevante
+      if (length(stat_analysis) > 0) {
+        results$statistical_analysis <- stat_analysis
+      }
+    }
+  }
   
   # tenta obter dados meteorológicos
   tryCatch({
     weather_data <- get_current_weather("São Paulo", "BR")
     if (!is.null(weather_data)) {
-      # analisa dados meteorológicos
+      # analisar dados meteorológicos
       results$weather_analysis <- analyze_weather(weather_data)
       
       # gera recomendações baseadas nos dados da cultura e clima
@@ -585,7 +684,7 @@ process_data <- function(input_data) {
       results$sugarcane_specific <- analyze_sugarcane_data(input_data)
     }
   } else {
-    # se não houver tipo de cultura definido, é provavelmente uma execução de teste
+    # se não houver tipo de cultura definido, é provavelmente um teste
     results$test_message <- "Dados recebidos para teste, sem tipo de cultura específico"
   }
   
@@ -601,7 +700,7 @@ process_data <- function(input_data) {
 
 # função principal
 main <- function() {
-  # verificar argumentos da linha de comando
+  # verifica argumentos da linha de comando
   args <- commandArgs(trailingOnly = TRUE)
   
   if (length(args) < 1) {
@@ -651,7 +750,7 @@ main <- function() {
 # EXECUÇÃO PRINCIPAL
 #=========================================================
 
-# SEMPRE use tryCatch para capturar erros
+# SEMPRE usar tryCatch para capturar erros
 tryCatch({
   # inicia log no stderr
   log_info("Iniciando API FarmTech...")
@@ -793,8 +892,8 @@ generate_recommendations <- function(culture_data, weather_data) {
   
   # risco de deriva de defensivos
   if (culture_data$quantidade_herbicida > 0 || culture_data$quantidade_fertilizante > 0) {
-    drift_risk <- if (wind_speed < 3)      "baixo"
-                 else if (wind_speed < 8)  "moderado"
+    drift_risk <- if (wind_speed < 3) "baixo"
+                 else if (wind_speed < 8) "moderado"
                  else if (wind_speed < 15) "alto"
                  else "extremo"
     
@@ -951,7 +1050,7 @@ generate_recommendations <- function(culture_data, weather_data) {
   statistical_models$historical_comparison <- historical_comparison
   
   #-----------------------------------------------------------------------
-  # Resumo das recomendações
+  # resumo das recomendações
   #-----------------------------------------------------------------------
   summary <- list(
     can_apply_chemicals = can_apply_chemicals,
@@ -984,14 +1083,14 @@ generate_recommendations <- function(culture_data, weather_data) {
   invisible(main())
   
 }, error = function(e) {
-  # garante que jsonlite esteja disponível para gerar JSON
+  # garantir que jsonlite esteja disponível para gerar JSON
   json_available <- requireNamespace("jsonlite", quietly = TRUE)
   
   # mensagem de erro para log
   err_msg <- paste("Erro fatal:", e$message)
   log_info(err_msg)
   
-  # se jsonlite estiver disponível, usar toJSON
+  # se jsonlite estiver disponível, usa toJSON
   if (json_available) {
     # garante que mesmo com erros fatais, retorne um JSON válido para stdout
     cat(jsonlite::toJSON(list(
@@ -1009,4 +1108,3 @@ generate_recommendations <- function(culture_data, weather_data) {
   
   quit(status = 1)
 })
-

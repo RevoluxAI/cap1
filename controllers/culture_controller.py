@@ -11,6 +11,7 @@ from services.r_integration import send_to_r_for_analysis
 logger = logging.getLogger(__name__)
 
 
+
 class CultureController:
     """
     Controlador para operações relacionadas a culturas agrícolas.
@@ -208,12 +209,12 @@ class CultureController:
                 "strategy": strategy
             })
 
-            # valida e obter recomendações para soja
+            # valida e obtém recomendações para soja
             recommendations = self.validate_soybean_parameters(area, espacamento, variedade, with_irrigation)
             culture_data["recomendacoes"] = recommendations
 
             # parâmetros específicos para soja
-            culture_data["dosagem_herbicida"] = 2.5  # L/ha para Glifosato
+            culture_data["dosagem_herbicida"] = 2.5     # L/ha para Glifosato
             culture_data["dosagem_fertilizante"] = 300  # kg/ha para NPK
 
         elif culture_type == 2:  # Cana-de-Açúcar
@@ -245,19 +246,98 @@ class CultureController:
         # cálculo de insumos
         self._calculate_inputs(culture_data)
 
-        # se tiver irrigação, calcula consumo de água
+        # se tiver irrigação, calcule consumo de água
         if with_irrigation:
             irrigation_rate = 0.8  # Taxa de irrigação em L/m²
             culture_data["consumo_agua"] = area * 10000 * irrigation_rate  # em litros
 
-        # envia dados para análise no R se aplicável
+        # envia dados para análise no R e processa os resultados estatísticos
         try:
             r_analysis = send_to_r_for_analysis(culture_data)
             if r_analysis:
                 culture_data["analise_estatistica"] = r_analysis
-        except Exception as e:
-            logger.warning(f"Não foi possível obter análise R: {str(e)}")
 
+                # extrai e formatar estatísticas para uso no frontend
+                if "input_summary" in r_analysis:
+                    summary = r_analysis["input_summary"]
+                    # formata estatísticas para exibição
+                    formatted_stats = {}
+                    
+                    for field, stats in summary.items():
+                        if isinstance(stats, dict) and "mean" in stats and "std_dev" in stats:
+                            # cria um dicionário com estatísticas mais detalhadas
+                            formatted_stats[field] = {
+                                "media": round(stats["mean"], 2) if not isinstance(stats["mean"], str) else stats["mean"],
+                                "desvio_padrao": round(stats["std_dev"], 2) if not isinstance(stats["std_dev"], str) else stats["std_dev"],
+                                "coeficiente_variacao": round((stats["std_dev"] / stats["mean"]) * 100, 2) if not isinstance(stats["std_dev"], str) and not isinstance(stats["mean"], str) and stats["mean"] != 0 else "N/A",
+                                "erro_padrao": round(stats["std_dev"] / (stats["n"] ** 0.5), 2) if not isinstance(stats["std_dev"], str) and stats.get("n", 0) > 0 else "N/A",
+                                "intervalo_confianca": [
+                                    round(stats.get("conf_low", stats["mean"] - 1.96 * stats["std_dev"] / (stats["n"] ** 0.5)), 2),
+                                    round(stats.get("conf_high", stats["mean"] + 1.96 * stats["std_dev"] / (stats["n"] ** 0.5)), 2)
+                                ] if not isinstance(stats["mean"], str) and not isinstance(stats["std_dev"], str) and stats.get("n", 0) > 0 else ["N/A", "N/A"],
+                                "minimo": stats.get("min", "N/A"),
+                                "maximo": stats.get("max", "N/A"),
+                                "amplitude": round(stats.get("max", 0) - stats.get("min", 0), 2) if "max" in stats and "min" in stats else "N/A",
+                                "mediana": stats.get("median", "N/A"),
+                                "q1": stats.get("q1", "N/A"),
+                                "q3": stats.get("q3", "N/A"),
+                                "iqr": stats.get("iqr", "N/A"),
+                                "tamanho_amostra": stats.get("n", 0)
+                            }
+                    
+                    if formatted_stats:
+                        # adiciona explicações sobre as estatísticas
+                        culture_data["estatisticas_formatadas"] = formatted_stats
+                        culture_data["explicacoes_estatisticas"] = {
+                            "media": "Média aritmética dos valores (soma dividida pelo número de observações)",
+                            "desvio_padrao": "Medida de dispersão que indica quanto os valores estão espalhados em relação à média",
+                            "coeficiente_variacao": "Desvio padrão relativo à média, expresso em porcentagem. Útil para comparar variabilidade entre diferentes conjuntos de dados",
+                            "erro_padrao": "Estimativa da variabilidade da média amostral em relação à média populacional",
+                            "intervalo_confianca": "Intervalo onde a média populacional tem 95% de probabilidade de estar contida",
+                            "amplitude": "Diferença entre o valor máximo e mínimo",
+                            "mediana": "Valor central que divide o conjunto de dados em duas partes iguais",
+                            "q1": "Primeiro quartil - 25% dos valores estão abaixo deste ponto",
+                            "q3": "Terceiro quartil - 75% dos valores estão abaixo deste ponto",
+                            "iqr": "Intervalo interquartil - diferença entre Q3 e Q1, usado para identificar outliers"
+                        }
+
+                
+                # processa análises estatísticas avançadas, se disponíveis
+                if "statistical_analysis" in r_analysis:
+                    stat_analysis = r_analysis["statistical_analysis"]
+                    
+                    # extrai informações sobre outliers se existirem
+                    outliers_info = {}
+                    for key, value in stat_analysis.items():
+                        if key.endswith("_outliers") and "n_outliers" in value and value["n_outliers"] > 0:
+                            field = key.replace("_outliers", "")
+                            outliers_info[field] = {
+                                "quantidade": value["n_outliers"],
+                                "porcentagem": round(value.get("percentage", 0), 2),
+                                "valores": value.get("outliers", []),
+                                "metodo": value.get("method", "desconhecido")
+                            }
+                    
+                    if outliers_info:
+                        culture_data["outliers_detectados"] = outliers_info
+                    
+                    # extrai informações sobre tendências se existirem
+                    trends_info = {}
+                    for key, value in stat_analysis.items():
+                        if key.endswith("_trend") and "trend" in value:
+                            field = key.replace("_trend", "")
+                            trends_info[field] = {
+                                "tendencia": value["trend"],
+                                "inclinacao": value.get("slope", "N/A"),
+                                "significancia": value.get("significance", "N/A"),
+                                "metodo": value.get("method", "análise simples")
+                            }
+                    
+                    if trends_info:
+                        culture_data["analise_tendencia"] = trends_info
+        except Exception as e:
+            logger.warning(f"Não foi possível obter análise R completa: {str(e)}")
+            
         return culture_data
 
 
@@ -278,7 +358,7 @@ class CultureController:
         # normaliza ciclo para garantir consistência
         ciclo = ciclo.lower() if ciclo else "médio"
         
-        # se ciclo não está nas recomendações, usa "médio" como padrão
+        # se ciclo não está nas recomendações, usar "médio" como padrão
         if ciclo not in self.SUGARCANE_RECOMMENDATIONS:
             ciclo = "médio"
             
@@ -341,7 +421,7 @@ class CultureController:
                 f"Sem irrigação, a produtividade pode ser significativamente reduzida."
             )
         
-        # junta todas as recomendações
+        # juntar todas as recomendações
         return {
             "ciclo_info": {
                 "duracao": ciclo_rec["duracao"]["meses"] + " meses",
@@ -393,7 +473,7 @@ class CultureController:
         # normaliza variedade para garantir consistência
         variedade = variedade.lower() if variedade else "convencional"
         
-        # se variedade não está nas recomendações, usa "convencional" como padrão
+        # se variedade não está nas recomendações, usar "convencional" como padrão
         if variedade not in self.SOYBEAN_RECOMMENDATIONS:
             variedade = "convencional"
             
@@ -553,6 +633,211 @@ class CultureController:
         # calcula o número de linhas
         return int(lado / espacamento)
 
+
+    def generate_random_cultures(self, culture_type: int, num_samples: int = 10, 
+                               with_statistics: bool = True) -> Dict[str, Any]:
+        """
+        Gera múltiplas culturas aleatórias para análise estatística
+
+        Args:
+            culture_type (int): Tipo de cultura (1=Soja, 2=Cana-de-Açúcar)
+            num_samples (int): Número de amostras a serem geradas
+            with_statistics (bool): Se deve calcular estatísticas sobre os dados gerados
+
+        Returns:
+            Dict[str, Any]: Dados gerados e estatísticas
+        """
+        import random
+        import math
+        import numpy as np
+        from datetime import datetime, timedelta
+
+        if num_samples <= 0:
+            raise ValueError("Número de amostras deve ser maior que zero")
+
+        # valida tipo de cultura
+        if culture_type not in [1, 2]:
+            raise ValueError(f"Tipo de cultura inválido: {culture_type}")
+
+        # configura limites com base no tipo de cultura
+        if culture_type == 1:  # Soja
+            variedades = ["convencional", "transgênica"]
+            area_min, area_max = 5, 100
+            espacamento_min, espacamento_max = 0.4, 0.6
+            params_name = "variedade"
+        else:  # Cana-de-Açúcar
+            ciclos = ["curto", "médio", "longo"]
+            area_min, area_max = 5, 50
+            espacamento_min, espacamento_max = 1.4, 1.8
+            params_name = "ciclo"
+
+        # gera culturas aleatórias
+        cultures = []
+        for i in range(num_samples):
+            # gera área aleatória com distribuição log-normal (mais realista)
+            area = round(random.lognormvariate(0, 0.5) * (area_max - area_min) / 3 + area_min, 2)
+            
+            # gera espaçamento aleatório
+            espacamento = round(random.uniform(espacamento_min, espacamento_max), 2)
+            
+            # decide sobre irrigação (30% de chance)
+            with_irrigation = random.random() < 0.3
+            
+            # parâmetros específicos por tipo
+            if culture_type == 1:  # Soja
+                specific_param = random.choice(variedades)
+            else:  # Cana-de-Açúcar
+                specific_param = random.choice(ciclos)
+            
+            # cria cultura
+            kwargs = {params_name: specific_param}
+            culture = self.create_culture(
+                culture_type=culture_type,
+                area=area,
+                espacamento=espacamento,
+                with_irrigation=with_irrigation,
+                **kwargs
+            )
+            
+            # adiciona ID para rastreabilidade
+            culture['id'] = f"{culture['tipo'].lower()}_{i+1}"
+            
+            # adiciona data aleatória de plantio (nos últimos 6 meses)
+            days_ago = random.randint(0, 180)
+            culture['data_plantio'] = (datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ) - timedelta(days=days_ago)).isoformat() 
+ 
+            cultures.append(culture)
+
+        # calcula estatísticas se solicitado
+        statistics = None
+        if with_statistics:
+            statistics = self._calculate_statistics_for_cultures(cultures)
+        
+        # resultado
+        result = {
+            "status": "success",
+            "count": len(cultures),
+            "cultures": cultures,
+            "culture_type": "Soja" if culture_type == 1 else "Cana-de-Açúcar"
+        }
+        
+        if statistics:
+            result["statistics"] = statistics
+        
+        return result
+
+
+    def _calculate_statistics_for_cultures(self, cultures: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Calcula estatísticas para um conjunto de culturas
+        
+        Args:
+            cultures (List[Dict[str, Any]]): Lista de culturas para análise
+                
+        Returns:
+            Dict[str, Any]: Estatísticas calculadas
+        """
+        import numpy as np
+        from collections import Counter
+        
+        if not cultures or len(cultures) == 0:
+            return {"error": "Nenhuma cultura disponível para análise"}
+        
+        # extrai campos numéricos para análise estatística
+        numeric_fields = ["area", "espacamento"]
+        
+        # adiciona campos calculados se disponíveis
+        for culture in cultures:
+            if "linhas_calculadas" in culture:
+                if "linhas_calculadas" not in numeric_fields:
+                    numeric_fields.append("linhas_calculadas")
+            if "quantidade_herbicida" in culture:
+                if "quantidade_herbicida" not in numeric_fields:
+                    numeric_fields.append("quantidade_herbicida")
+            if "quantidade_fertilizante" in culture:
+                if "quantidade_fertilizante" not in numeric_fields:
+                    numeric_fields.append("quantidade_fertilizante")
+            if "metros_lineares_total" in culture:
+                if "metros_lineares_total" not in numeric_fields:
+                    numeric_fields.append("metros_lineares_total")
+        
+        # estatísticas para campos numéricos
+        numeric_stats = {}
+        for field in numeric_fields:
+            values = [culture.get(field, 0) for culture in cultures]
+            if any(values):  # Se houver pelo menos um valor não-zero
+                # calcula estatísticas detalhadas
+                numeric_stats[field] = {
+                    "mean": float(np.mean(values)),
+                    "median": float(np.median(values)),
+                    "std_dev": float(np.std(values)),
+                    "variance": float(np.var(values)),  # Adicionando a variância
+                    "std_error": float(np.std(values)/np.sqrt(len(values))),  # Adicionando erro padrão
+                    "coefficient_of_variation": float(np.std(values)/np.mean(values)*100) if np.mean(values) != 0 else 0,  # Coeficiente de variação em %
+                    "min": float(np.min(values)),
+                    "max": float(np.max(values)),
+                    "range": float(np.max(values) - np.min(values)),  # Adicionando range (amplitude)
+                    "q1": float(np.percentile(values, 25)),
+                    "q3": float(np.percentile(values, 75)),
+                    "iqr": float(np.percentile(values, 75) - np.percentile(values, 25)),  # Adicionando intervalo interquartil
+                    "count": len(values),
+                    # adiciona descrições claras para cada estatística
+                    "descriptions": {
+                        "mean": "Média aritmética dos valores",
+                        "median": "Valor central que divide a distribuição ao meio",
+                        "std_dev": "Desvio padrão: medida de dispersão dos valores em relação à média",
+                        "variance": "Variância: média dos quadrados dos desvios em relação à média",
+                        "coefficient_of_variation": "Coeficiente de variação: desvio padrão relativo à média (%)",
+                        "std_error": "Erro padrão: estimativa do desvio padrão da média amostral",
+                        "min": "Valor mínimo encontrado",
+                        "max": "Valor máximo encontrado",
+                        "range": "Amplitude: diferença entre o maior e o menor valor",
+                        "q1": "Primeiro quartil: 25% dos valores são menores que este",
+                        "q3": "Terceiro quartil: 75% dos valores são menores que este",
+                        "iqr": "Intervalo interquartil: diferença entre Q3 e Q1"
+                    }
+                }
+        
+        # estatísticas para campos categóricos
+        categorical_stats = {}
+        
+        # verifica tipo de cultura para determinar campos categóricos
+        culture_type = cultures[0].get("tipo")
+        
+        if culture_type == "Soja":
+            variedades = [culture.get("variedade") for culture in cultures]
+            categorical_stats["variedade"] = dict(Counter(variedades))
+        elif culture_type == "Cana-de-Açúcar":
+            ciclos = [culture.get("ciclo") for culture in cultures]
+            categorical_stats["ciclo"] = dict(Counter(ciclos))
+        
+        # estatísticas para irrigação
+        irrigation_count = sum(1 for culture in cultures if culture.get("irrigacao", False))
+        categorical_stats["irrigacao"] = {
+            "com_irrigacao": irrigation_count,
+            "sem_irrigacao": len(cultures) - irrigation_count,
+            "percentual_irrigacao": round(irrigation_count / len(cultures) * 100, 2)
+        }
+        
+        # resultados
+        return {
+            "numeric": numeric_stats,
+            "categorical": categorical_stats,
+            "sample_size": len(cultures),
+            "explanation": {
+                "desvio_padrao": "O desvio padrão é uma medida estatística que indica quanto os valores da amostra variam em relação à média. "
+                                "Um desvio padrão baixo indica que os valores tendem a estar próximos da média, enquanto um desvio padrão alto "
+                                "indica que os valores estão espalhados por uma gama mais ampla. É calculado como a raiz quadrada da variância.",
+                "variancia": "A variância mede a dispersão dos valores em relação à média, calculando a média dos quadrados dos desvios. "
+                            "Quanto maior a variância, mais dispersos estão os valores em relação à média.",
+                "erro_padrao": "O erro padrão é uma estimativa do desvio padrão da média amostral. Ele indica a precisão da estimativa da média "
+                              "populacional baseada na amostra atual. Um erro padrão menor indica uma estimativa mais precisa da média."
+            }
+        }
+
+
     def _calculate_rectangular_strategy(self, area: float, espacamento: float, proporcao: float = 1.5) -> int:
         """
         Estratégia de cálculo para área retangular
@@ -604,7 +889,7 @@ class CultureController:
 
         # estima o comprimento da linha com base na área e espaçamento
         if linhas > 0 and espacamento > 0:
-            # para uma estimativa simples, assume-se que o comprimento é aproximadamente
+            # para uma estimativa simples, assumimos que o comprimento é aproximadamente
             # a área dividida pelo número de linhas vezes o espaçamento
             comprimento_linha = (area * 10000) / (linhas * espacamento)
             culture_data["comprimento_linha"] = comprimento_linha
@@ -625,12 +910,12 @@ class CultureController:
         """
         from services.r_integration import get_weather_data
 
-        # se tem dados em cache e eles são recentes, retorna dados do cache
+        # se tiver os dados em cache e eles são recentes, retornar do cache
         if self.weather_data is not None:
             # TODO: Implementar verificação de idade do cache
             pass
 
-        # obter novos dados meteorológicos
+        # obtém novos dados meteorológicos
         try:
             self.weather_data = get_weather_data(lat, lon)
             return self.weather_data
@@ -655,10 +940,10 @@ class CultureController:
             # extrai dados reais de meteorologia da estrutura aninhada
             actual_weather_data = None
 
-            # verifica se possui dados meteorológicos com a estrutura esperada
+            # verifica se têm dados meteorológicos com a estrutura esperada
             if weather_data and "data" in weather_data and "weather" in weather_data["data"]:
                 if isinstance(weather_data["data"]["weather"], list) and len(weather_data["data"]["weather"]) > 0:
-                    # obtém o primeiro objeto de dados meteorológicos da lista
+                    # obter o primeiro objeto de dados meteorológicos da lista
                     actual_weather_data = weather_data["data"]["weather"][0]
 
                     # adiciona as informações de análise aos dados meteorológicos
@@ -674,7 +959,7 @@ class CultureController:
                         if "agricultural_impact" in weather_data["data"]["analysis"]:
                             actual_weather_data["agricultural_impact"] = weather_data["data"]["analysis"]["agricultural_impact"]
                 elif isinstance(weather_data["data"]["weather"], dict):
-                    # se for um dicionário único, usa diretamente
+                    # se for um dicionário único, usar diretamente
                     actual_weather_data = weather_data["data"]["weather"]
 
             # se não conseguir extrair os dados meteorológicos, retorna recomendações básicas

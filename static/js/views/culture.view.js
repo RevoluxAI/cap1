@@ -49,7 +49,7 @@ export class CultureView {
                     </div>
                 `;
             }
-        }, 5000); // 5 segundos para timeout (ugly as f**k!)
+        }, 5000); // 5 segundos para timeout
         
         try {
             const container = document.getElementById('cultures-list');
@@ -174,6 +174,7 @@ export class CultureView {
         }
     }
 
+
     /**
      * Cria um elemento de cartão de cultura
      * @param {Object} culture - Dados da cultura
@@ -201,6 +202,12 @@ export class CultureView {
             
             // define classe para cultura analisada
             const analyzedClass = wasAnalyzed ? 'analyzed' : '';
+            
+            // verifica se existem estatísticas com desvio padrão
+            const hasDeviationStats = 
+                culture.estatisticas_formatadas || 
+                (culture.analise_estatistica && culture.analise_estatistica.input_summary) ||
+                false;
             
             // cria o elemento principal do cartão
             const colElement = document.createElement('div');
@@ -231,6 +238,14 @@ export class CultureView {
                         <div class="mb-2">
                             Linhas calculadas: ${culture.linhas_calculadas || 'Não calculado'}
                         </div>
+                        ${wasAnalyzed ? `
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-primary view-stats-btn" 
+                                        data-culture-id="${index}" ${hasDeviationStats ? '' : 'disabled'}>
+                                    <i class="fas fa-chart-line me-1"></i>Ver Estatísticas Detalhadas
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="card-footer d-flex justify-content-between align-items-center">
                         ${culture.irrigacao ? 
@@ -244,11 +259,58 @@ export class CultureView {
                 </div>
             `;
             
+            // configura evento para o botão de estatísticas, se existir
+            if (wasAnalyzed) {
+                const statsButton = colElement.querySelector('.view-stats-btn');
+                if (statsButton) {
+                    statsButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this._showStatsDetails(culture, index);
+                    });
+                }
+            }
+            
             return colElement;
         } catch (error) {
             console.error(`Erro ao criar cartão para cultura ${index}:`, error);
             return null;
         }
+    }
+
+    /**
+     * Mostra detalhes de estatísticas para uma cultura
+     * @param {Object} culture - Dados da cultura
+     * @param {number} index - Índice da cultura
+     * @private
+     */
+    _showStatsDetails(culture, index) {
+        // dispara evento de visualização
+        document.dispatchEvent(new CustomEvent('culture:view', {
+            detail: { cultureId: index }
+        }));
+        
+        // após um breve delay para permitir que a view de análise seja carregada
+        setTimeout(() => {
+            // alterna para a aba de estatísticas
+            const statsTab = document.querySelector('[href="#tab-stats"]');
+            if (statsTab) {
+                statsTab.click();
+                
+                // após um outro breve delay para garantir que as estatísticas sejam carregadas
+                setTimeout(() => {
+                    // ativa o processamento de estatísticas (definido em stats-enhancement.js)
+                    if (window.processJSONStats) {
+                        window.processJSONStats();
+                    }
+                    
+                    // rola para o dashboard de estatísticas
+                    const statsDashboard = document.getElementById('stats-dashboard');
+                    if (statsDashboard) {
+                        statsDashboard.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 500);
+            }
+        }, 300);
     }
 
     /**
@@ -315,13 +377,8 @@ export class CultureView {
         }
     }
 
-    /**
-     * Constrói o menu de ações para um cartão de cultura
-     * @param {Number} cultureId - ID da cultura
-     * @param {Boolean} wasAnalyzed - Se a cultura já foi analisada
-     * @returns {String} HTML do menu de ações
-     * @private
-     */
+
+
     _buildActionsMenu(cultureId, wasAnalyzed) {
         let menu = '<ul class="dropdown-menu dropdown-menu-end">';
         
@@ -337,8 +394,8 @@ export class CultureView {
         
         // adiciona opções comuns
         menu += `
-            <li><a class="dropdown-item" href="#" data-action="analyze" 
-                   data-culture-id="${cultureId}">
+            <li><a class="dropdown-item btn-primary" href="#" data-action="analyze" 
+                   data-culture-id="${cultureId}" style="background-color: #0d6efd; color: white;">
                 <i class="fas fa-chart-line me-2"></i>Analisar
             </a></li>
             <li><a class="dropdown-item" href="#" data-action="edit" 
@@ -355,6 +412,7 @@ export class CultureView {
         menu += '</ul>';
         return menu;
     }
+
     
     /**
      * Configura eventos para cartões de cultura
